@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stores StoreUser[]
+
+  @@map("users")
+}
+
+model Store {
+  id            String   @id @default(uuid())
+  name          String
+  shopifyUrl    String   @unique @map("shopify_url")
+  adminApiToken String?  @map("admin_api_token")
+  widgetKey     String   @unique @default(uuid()) @map("widget_key")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  users  StoreUser[]
+  config DrawerConfig?
+  orders Order[]
+
+  @@map("stores")
+}
+
+model StoreUser {
+  id      String @id @default(uuid())
+  userId  String @map("user_id")
+  storeId String @map("store_id")
+  role    String @default("owner")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@map("store_users")
+}
+
+model DrawerConfig {
+  id            String   @id @default(uuid())
+  storeId       String   @unique @map("store_id")
+  announcements Json     @default("[]")
+  rewardBar     Json     @default("{}") @map("reward_bar")
+  upsells       Json     @default("{}")
+  addons        Json     @default("[]")
+  notes         Json     @default("{}")
+  confirmation  Json     @default("{}")
+  discounts     Json     @default("{}")
+  trustBadges   Json     @default("[]") @map("trust_badges")
+  freeGifts     Json     @default("[]") @map("free_gifts")
+  settings      Json     @default("{}")
+  colors        Json     @default("{}")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("drawer_configs")
+}
+
+model Order {
+  id             String   @id @default(uuid())
+  storeId        String   @map("store_id")
+  shopifyOrderId String?  @map("shopify_order_id")
+  customerPhone  String   @map("customer_phone")
+  customerEmail  String?  @map("customer_email")
+  customerName   String?  @map("customer_name")
+  address        Json
+  items          Json
+  subtotal       Decimal  @db.Decimal(10, 2)
+  discount       Decimal  @default(0) @db.Decimal(10, 2)
+  total          Decimal  @db.Decimal(10, 2)
+  couponCode     String?  @map("coupon_code")
+  paymentStatus  String   @default("pending") @map("payment_status")
+  paymentId      String?  @map("payment_id")
+  paymentMethod  String?  @map("payment_method")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([paymentStatus])
+  @@map("orders")
+}

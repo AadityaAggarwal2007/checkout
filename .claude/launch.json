@@ -1,0 +1,55 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "chat-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "cwd": "/Users/aadityaaggarwal/Desktop/chat-support/dashboard"
+    },
+    {
+      "name": "chat-server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "src/index.js"
+      ],
+      "port": 3001,
+      "cwd": "/Users/aadityaaggarwal/Desktop/chat-support/server"
+    },
+    {
+      "name": "internreach",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3001"
+      ],
+      "port": 3001,
+      "cwd": "/Users/aadityaaggarwal/Desktop/untitled folder 7/internreach"
+    },
+    {
+      "name": "shopdrawer",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "test-server.js"
+      ],
+      "port": 5002,
+      "cwd": "/Users/aadityaaggarwal/Desktop/Shopify solution/server"
+    },
+    {
+      "name": "rv-test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "rv-serve.js"
+      ],
+      "port": 5099,
+      "cwd": "/private/tmp/claude-501/-Users-aadityaaggarwal-Desktop-Shopify-solution/00958292-f766-4585-ae92-3b0377b8e063/scratchpad"
+    }
+  ]
+}

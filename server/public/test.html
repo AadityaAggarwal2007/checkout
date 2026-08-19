@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopDrawer Widget Test</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 40px; background: #f5f5f5; }
+    .store { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    p { color: #666; margin-bottom: 32px; }
+    .products { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+    .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .product-card img { width: 100%; height: 180px; object-fit: cover; background: #eee; }
+    .product-card .info { padding: 16px; }
+    .product-card .title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .product-card .price { color: #6C5CE7; font-weight: 700; font-size: 16px; margin-bottom: 12px; }
+    .product-card button { width: 100%; padding: 10px; background: #6C5CE7; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .product-card button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+<div class="store">
+  <h1>Test Store</h1>
+  <p>Click "Add to Cart" to test the ShopDrawer widget</p>
+  <div class="products">
+    <div class="product-card">
+      <img src="https://picsum.photos/seed/shirt/400/300" alt="Premium T-Shirt">
+      <div class="info">
+        <div class="title">Premium Cotton T-Shirt</div>
+        <div class="price">₹899</div>
+        <form action="/cart/add" method="post">
+          <input type="hidden" name="id" value="44001">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit">Add to Cart</button>
+        </form>
+      </div>
+    </div>
+    <div class="product-card">
+      <img src="https://picsum.photos/seed/jeans/400/300" alt="Slim Fit Jeans">
+      <div class="info">
+        <div class="title">Slim Fit Jeans</div>
+        <div class="price">₹1,499</div>
+        <form action="/cart/add" method="post">
+          <input type="hidden" name="id" value="44002">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit">Add to Cart</button>
+        </form>
+      </div>
+    </div>
+    <div class="product-card">
+      <img src="https://picsum.photos/seed/sneakers/400/300" alt="Running Sneakers">
+      <div class="info">
+        <div class="title">Running Sneakers</div>
+        <div class="price">₹2,999</div>
+        <form action="/cart/add" method="post">
+          <input type="hidden" name="id" value="44003">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit">Add to Cart</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Mock Shopify Cart API
+var mockCart = {
+  token: 'mock-cart-token',
+  note: '',
+  attributes: {},
+  total_price: 0,
+  original_total_price: 0,
+  total_discount: 0,
+  item_count: 0,
+  items: [],
+  currency: 'INR'
+};
+
+var mockProducts = {
+  44001: { id: 44001, variant_id: 44001, title: 'Premium Cotton T-Shirt', product_title: 'Premium Cotton T-Shirt', variant_title: 'M / Black', price: 89900, line_price: 89900, original_line_price: 99900, quantity: 1, image: 'https://picsum.photos/seed/shirt/200/200', key: 'key_44001' },
+  44002: { id: 44002, variant_id: 44002, title: 'Slim Fit Jeans', product_title: 'Slim Fit Jeans', variant_title: 'L / Blue', price: 149900, line_price: 149900, original_line_price: 149900, quantity: 1, image: 'https://picsum.photos/seed/jeans/200/200', key: 'key_44002' },
+  44003: { id: 44003, variant_id: 44003, title: 'Running Sneakers', product_title: 'Running Sneakers', variant_title: '10 / White', price: 299900, line_price: 299900, original_line_price: 349900, quantity: 1, image: 'https://picsum.photos/seed/sneakers/200/200', key: 'key_44003' }
+};
+
+function recalcCart() {
+  mockCart.total_price = 0;
+  mockCart.original_total_price = 0;
+  mockCart.item_count = 0;
+  for (var i = 0; i < mockCart.items.length; i++) {
+    mockCart.items[i].line_price = mockCart.items[i].price * mockCart.items[i].quantity;
+    mockCart.items[i].original_line_price = (mockProducts[mockCart.items[i].variant_id] ? mockProducts[mockCart.items[i].variant_id].original_line_price : mockCart.items[i].price) * mockCart.items[i].quantity;
+    mockCart.total_price += mockCart.items[i].line_price;
+    mockCart.original_total_price += mockCart.items[i].original_line_price;
+    mockCart.item_count += mockCart.items[i].quantity;
+  }
+}
+
+// Mock widget config API
+var mockConfig = {
+  announcements: {
+    enabled: true,
+    messages: [
+      { text: '🔥 Free shipping on orders above ₹999!' },
+      { text: '⚡ Flash Sale: Extra 10% off with code FLASH10' },
+      { text: '🎁 Buy 2 Get 1 Free on selected items' }
+    ],
+    duration: 4
+  },
+  rewardBar: {
+    enabled: true,
+    tiers: [
+      { threshold: 999, label: 'Free Shipping', type: 'shipping' },
+      { threshold: 1999, label: 'Free Gift', type: 'gift' },
+      { threshold: 2999, label: 'Mystery Box', type: 'product' }
+    ],
+    confetti: { enabled: true, template: 'fireworks' }
+  },
+  discounts: {
+    enabled: true,
+    codes: [
+      { code: 'FLASH10', type: 'percentage', value: 10 },
+      { code: 'FLAT200', type: 'fixed', value: 200 },
+      { code: 'WELCOME15', type: 'percentage', value: 15 }
+    ]
+  },
+  upsells: { enabled: true, title: 'You might also like', limit: 4, productHandles: [] },
+  freeGifts: {
+    enabled: true,
+    gifts: [
+      { threshold: 1500, label: 'Free Sticker Pack' },
+      { threshold: 3000, label: 'Free Tote Bag' }
+    ]
+  },
+  notes: { enabled: true, title: 'Order Notes', placeholder: 'Any special instructions?', charLimit: 200 },
+  trustBadges: { enabled: true, badges: ['upi', 'visa', 'mastercard', 'google_pay', 'cod'] },
+  confirmation: { enabled: true, checkboxEnabled: true, required: true, text: 'I agree to the Terms & Conditions and Privacy Policy' },
+  settings: {
+    openDrawerOnAdd: true,
+    showComparePrice: true,
+    showSavings: true,
+    showVariantSelector: true,
+    emptyCart: { title: 'Your cart is empty', description: "Looks like you haven't added anything yet.", buttonText: 'Start Shopping', buttonUrl: '#' }
+  },
+  colors: { primary: '#6C5CE7', text: '#1a1a1a', background: '#ffffff', accent: '#00b894' }
+};
+
+var mockUpsellProducts = [
+  { title: 'Classic Watch', images: [{ src: 'https://picsum.photos/seed/watch/200/200' }], variants: [{ id: 55001, price: 1999 }] },
+  { title: 'Leather Belt', images: [{ src: 'https://picsum.photos/seed/belt/200/200' }], variants: [{ id: 55002, price: 799 }] },
+  { title: 'Sunglasses', images: [{ src: 'https://picsum.photos/seed/sunglass/200/200' }], variants: [{ id: 55003, price: 1299 }] },
+  { title: 'Canvas Backpack', images: [{ src: 'https://picsum.photos/seed/bag/200/200' }], variants: [{ id: 55004, price: 1599 }] }
+];
+
+// Intercept fetch to mock Shopify + widget API
+var _origFetch = window.fetch;
+window.fetch = function(url, opts) {
+  var urlStr = typeof url === 'string' ? url : url.url || '';
+
+  // Shopify Cart API mocks
+  if (urlStr === '/cart.js' || urlStr.endsWith('/cart.js')) {
+    return Promise.resolve(new Response(JSON.stringify(mockCart), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  if (urlStr === '/cart/add.js' || urlStr.endsWith('/cart/add.js')) {
+    var body = opts && opts.body ? JSON.parse(opts.body) : {};
+    var vid = body.id;
+    var qty = body.quantity || 1;
+    var existing = mockCart.items.find(function(i) { return i.variant_id === vid; });
+    if (existing) {
+      existing.quantity += qty;
+    } else if (mockProducts[vid]) {
+      mockCart.items.push(Object.assign({}, mockProducts[vid], { quantity: qty }));
+    } else {
+      mockCart.items.push({
+        id: vid, variant_id: vid, title: 'Product ' + vid, product_title: 'Product ' + vid,
+        variant_title: '', price: 99900, line_price: 99900, original_line_price: 99900,
+        quantity: qty, image: 'https://picsum.photos/seed/p' + vid + '/200/200', key: 'key_' + vid
+      });
+    }
+    recalcCart();
+    return Promise.resolve(new Response(JSON.stringify(mockCart.items[mockCart.items.length - 1]), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  if (urlStr === '/cart/change.js' || urlStr.endsWith('/cart/change.js')) {
+    var body = opts && opts.body ? JSON.parse(opts.body) : {};
+    var key = body.id;
+    var newQty = body.quantity;
+    if (newQty === 0) {
+      mockCart.items = mockCart.items.filter(function(i) { return i.key !== key; });
+    } else {
+      var item = mockCart.items.find(function(i) { return i.key === key; });
+      if (item) item.quantity = newQty;
+    }
+    recalcCart();
+    return Promise.resolve(new Response(JSON.stringify(mockCart), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  if (urlStr === '/cart/update.js' || urlStr.endsWith('/cart/update.js')) {
+    var body = opts && opts.body ? JSON.parse(opts.body) : {};
+    if (body.note !== undefined) mockCart.note = body.note;
+    if (body.attributes) mockCart.attributes = body.attributes;
+    return Promise.resolve(new Response(JSON.stringify(mockCart), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  // Widget API mocks
+  if (urlStr.indexOf('/api/widget/config') !== -1) {
+    return Promise.resolve(new Response(JSON.stringify(mockConfig), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  if (urlStr.indexOf('/api/widget/upsell-products') !== -1) {
+    return Promise.resolve(new Response(JSON.stringify(mockUpsellProducts), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  if (urlStr.indexOf('/api/widget/validate-coupon') !== -1) {
+    var body = opts && opts.body ? JSON.parse(opts.body) : {};
+    var code = (body.code || '').toLowerCase();
+    var match = mockConfig.discounts.codes.find(function(c) { return c.code.toLowerCase() === code; });
+    if (match) {
+      return Promise.resolve(new Response(JSON.stringify({ valid: true, code: match.code, type: match.type, value: match.value, title: match.code }), { headers: { 'Content-Type': 'application/json' } }));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ valid: false }), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  if (urlStr.indexOf('/api/payments/create-order') !== -1) {
+    return Promise.resolve(new Response(JSON.stringify({ success: true, orderId: 'mock-order-' + Date.now(), status: 'cod_confirmed' }), { headers: { 'Content-Type': 'application/json' } }));
+  }
+
+  return _origFetch.apply(this, arguments);
+};
+</script>
+
+<script src="/widget.js" data-store-key="test-key"></script>
+
+</body>
+</html>
