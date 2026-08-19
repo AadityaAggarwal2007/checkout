@@ -1,7 +1,7 @@
 const express = require('express');
 const prisma = require('../db');
 const { decryptToken } = require('./stores');
-const sabpaisa = require('../services/sabpaisa');
+const payglocal = require('../services/payglocal');
 const shopify = require('../services/shopify');
 
 const router = express.Router();
@@ -74,7 +74,7 @@ router.post('/create-order', async (req, res) => {
       return res.json({ success: true, orderId: order.id, status: 'cod_confirmed' });
     }
 
-    const paymentData = await sabpaisa.initiatePayment({
+    const paymentData = await payglocal.initiatePayment({
       orderId: order.id,
       amount: total,
       customerPhone: contact.phone,
@@ -101,10 +101,10 @@ router.post('/create-order', async (req, res) => {
 
 router.post('/callback', async (req, res) => {
   try {
-    const isValid = sabpaisa.verifyCallback(req.body);
+    const isValid = payglocal.verifyCallback(req.body);
     if (!isValid) return res.status(400).json({ error: 'Invalid callback' });
 
-    const { orderId, status, transactionId } = sabpaisa.parseCallback(req.body);
+    const { orderId, status, transactionId } = payglocal.parseCallback(req.body);
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
