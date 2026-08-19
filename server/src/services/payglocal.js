@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { CompactEncrypt, CompactSign, importPKCS8, importX509 } = require('jose');
+const { CompactEncrypt, CompactSign, importPKCS8, importSPKI } = require('jose');
 
 const KEYS_DIR = path.join(__dirname, '../../keys');
 const MID = process.env.PAYGLOCAL_MID;
@@ -24,7 +24,7 @@ async function loadKeys() {
   const pubPem = fs.readFileSync(pubPath, 'utf8');
   const privPem = fs.readFileSync(privPath, 'utf8');
 
-  _pgPublicKey = await importX509(pubPem, 'RSA-OAEP-256');
+  _pgPublicKey = await importSPKI(pubPem, 'RSA-OAEP-256');
   _merchantPrivateKey = await importPKCS8(privPem, 'RS256');
 }
 
