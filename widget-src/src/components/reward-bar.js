@@ -67,13 +67,18 @@ function renderRewardBar(container, config, cartTotal) {
   var trackWrap = document.createElement('div');
   trackWrap.className = 'sd-reward-track-wrap';
 
+  // Track and dots share this rail so a dot at 100% lands on the track's end
+  // rather than on the wrapper's padding edge, which pushed it into the border.
+  var rail = document.createElement('div');
+  rail.className = 'sd-reward-rail';
+
   var track = document.createElement('div');
   track.className = 'sd-reward-track';
   var fill = document.createElement('div');
   fill.className = 'sd-reward-fill';
   fill.style.width = pct + '%';
   track.appendChild(fill);
-  trackWrap.appendChild(track);
+  rail.appendChild(track);
 
   for (var j = 0; j < sorted.length; j++) {
     var tier = sorted[j];
@@ -100,7 +105,7 @@ function renderRewardBar(container, config, cartTotal) {
     label.textContent = tier.label;
     ms.appendChild(label);
 
-    trackWrap.appendChild(ms);
+    rail.appendChild(ms);
 
     if (reached && !reachedTiers[tier.label] && config.confetti && config.confetti.enabled) {
       reachedTiers[tier.label] = true;
@@ -108,6 +113,7 @@ function renderRewardBar(container, config, cartTotal) {
     }
   }
 
+  trackWrap.appendChild(rail);
   el.appendChild(trackWrap);
   container.appendChild(el);
 }

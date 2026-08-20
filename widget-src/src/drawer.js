@@ -207,11 +207,6 @@ function render(config) {
     }, appliedCoupon ? appliedCoupon.code : null, couponDiscount);
   };
   footer.appendChild(checkoutBtn);
-
-  var note = document.createElement('div');
-  note.className = 'sd-footer-note';
-  note.innerHTML = icons.get('shield', 12) + '<span>Taxes and shipping calculated at checkout</span>';
-  footer.appendChild(note);
 }
 
 function open(config) {

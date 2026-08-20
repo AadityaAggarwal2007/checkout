@@ -73,7 +73,7 @@ function getStyles(colors) {
 .sd-announcement{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;
   background:linear-gradient(100deg,${primary},${primaryDark});color:#fff;
   font-size:12.5px;font-weight:500;letter-spacing:-.003em;text-align:center;flex-shrink:0}
-.sd-announcement-text{transition:opacity .28s ease}
+.sd-announcement-text{transition:opacity .18s ease}
 .sd-announcement .sd-icon{opacity:.9}
 
 /* ---------- Card primitive ---------- */
@@ -82,12 +82,14 @@ function getStyles(colors) {
 .sd-section-title .sd-icon{color:${n500}}
 
 /* ---------- Reward bar ---------- */
-.sd-reward-bar{margin:12px 14px 0;padding:15px 16px 13px;background:${bg};border:1px solid ${n200};border-radius:14px}
-.sd-reward-text{font-size:13px;color:${n600};letter-spacing:-.004em;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.sd-reward-bar{margin:10px 14px 0;padding:13px 16px 11px;background:${bg};border:1px solid ${n200};border-radius:14px}
+.sd-reward-text{font-size:12.5px;color:${n600};letter-spacing:-.004em;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px}
 .sd-reward-text b{color:${text};font-weight:600}
 .sd-reward-text .sd-icon{color:${primary};flex-shrink:0}
-.sd-reward-track-wrap{position:relative;height:30px;padding:0 17px;margin-bottom:22px}
-.sd-reward-track{position:absolute;left:17px;right:17px;top:50%;height:5px;margin-top:-2.5px;
+/* Side padding keeps the end dots and their labels clear of the card border. */
+.sd-reward-track-wrap{padding:0 26px;margin-bottom:20px}
+.sd-reward-rail{position:relative;height:30px}
+.sd-reward-track{position:absolute;left:0;right:0;top:50%;height:5px;margin-top:-2.5px;
   background:${n200};border-radius:999px;z-index:0}
 .sd-reward-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,${primaryLight},${primary});
   transition:width .62s cubic-bezier(.32,.72,0,1);position:relative;overflow:hidden}
@@ -105,16 +107,16 @@ function getStyles(colors) {
   box-shadow:0 0 0 4px ${alpha(primary, 0.12)}}
 .sd-milestone-label{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);white-space:nowrap;
   font-size:10px;line-height:1.2;color:${n500};text-align:center;letter-spacing:-.002em;
-  max-width:80px;overflow:hidden;text-overflow:ellipsis}
-.sd-milestone.sd-edge-end .sd-milestone-label{left:auto;right:-4px;transform:none;text-align:right}
+  max-width:86px;overflow:hidden;text-overflow:ellipsis}
+.sd-milestone.sd-edge-end .sd-milestone-label{left:auto;right:-6px;transform:none;text-align:right}
 .sd-milestone.sd-reached .sd-milestone-label{color:${text};font-weight:600}
 .sd-milestone.sd-next .sd-milestone-label{color:${primary};font-weight:600}
 
 /* ---------- Product rows ---------- */
-.sd-items{margin:12px 14px 0;background:${bg};border:1px solid ${n200};border-radius:14px;overflow:hidden}
-.sd-product{display:flex;gap:12px;padding:14px;border-bottom:1px solid ${n100}}
+.sd-items{margin:10px 14px 0;background:${bg};border:1px solid ${n200};border-radius:14px;overflow:hidden}
+.sd-product{display:flex;gap:11px;padding:11px 12px;border-bottom:1px solid ${n100}}
 .sd-product:last-child{border-bottom:none}
-.sd-product-img{width:66px;height:66px;border-radius:10px;object-fit:cover;background:${n100};border:1px solid ${alpha('#000000', 0.05)};flex-shrink:0}
+.sd-product-img{width:56px;height:56px;border-radius:9px;object-fit:cover;background:${n100};border:1px solid ${alpha('#000000', 0.05)};flex-shrink:0}
 .sd-product-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .sd-product-title{font-size:13.5px;font-weight:500;letter-spacing:-.008em;line-height:1.35;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -132,8 +134,8 @@ function getStyles(colors) {
 .sd-qty span{min-width:26px;text-align:center;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 
 /* ---------- Coupons ---------- */
-.sd-coupons-section{margin:12px 14px 0}
-.sd-coupons{display:flex;align-items:center;gap:11px;padding:13px 14px;background:${bg};border:1px solid ${n200};border-radius:14px;cursor:pointer;transition:border-color .18s,box-shadow .18s;user-select:none}
+.sd-coupons-section{margin:10px 14px 0}
+.sd-coupons{display:flex;align-items:center;gap:11px;padding:11px 14px;background:${bg};border:1px solid ${n200};border-radius:14px;cursor:pointer;transition:border-color .18s,box-shadow .18s;user-select:none}
 .sd-coupons:hover{border-color:${n300}}
 .sd-coupons.sd-expanded{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent}
 .sd-coupons-icon{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:${alpha(primary, 0.1)};color:${primary};flex-shrink:0}
@@ -178,14 +180,14 @@ function getStyles(colors) {
 .sd-coupons-saved{display:flex;align-items:center;gap:6px;font-size:12px;color:${accent};font-weight:500;margin-top:9px}
 
 /* ---------- Upsells ---------- */
-.sd-upsells{margin:16px 0 0;padding:0 14px}
-.sd-upsells-scroll{display:flex;gap:10px;overflow-x:auto;padding:2px 14px 10px;margin:0 -14px;
+.sd-upsells{margin:12px 0 0;padding:0 14px}
+.sd-upsells-scroll{display:flex;gap:10px;overflow-x:auto;padding:2px 14px 8px;margin:0 -14px;
   -webkit-overflow-scrolling:touch;scrollbar-width:none}
 .sd-upsells-scroll::-webkit-scrollbar{display:none}
-.sd-upsell-card{width:134px;flex-shrink:0;background:${bg};border:1px solid ${n200};border-radius:12px;overflow:hidden;
+.sd-upsell-card{width:126px;flex-shrink:0;background:${bg};border:1px solid ${n200};border-radius:12px;overflow:hidden;
   transition:transform .2s cubic-bezier(.32,.72,0,1),box-shadow .2s,border-color .2s}
 .sd-upsell-card:hover{transform:translateY(-2px);border-color:${n300};box-shadow:0 6px 16px -6px rgba(9,9,11,.14)}
-.sd-upsell-img{width:100%;height:104px;object-fit:cover;background:${n100};display:block}
+.sd-upsell-img{width:100%;height:92px;object-fit:cover;background:${n100};display:block}
 .sd-upsell-info{padding:9px 10px 10px}
 .sd-upsell-name{font-size:12px;font-weight:500;letter-spacing:-.006em;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:31px}
@@ -195,7 +197,7 @@ function getStyles(colors) {
 .sd-upsell-add:hover{background:${primary};border-color:${primary};color:#fff}
 
 /* ---------- Free gifts ---------- */
-.sd-gifts{margin:16px 14px 0}
+.sd-gifts{margin:12px 14px 0}
 .sd-gift-card{position:relative;display:flex;align-items:center;gap:11px;padding:12px 13px;margin-bottom:8px;
   border:1.5px dashed ${n300};border-radius:11px;background:${bg};transition:all .22s;overflow:hidden}
 .sd-gift-card:last-child{margin-bottom:0}
@@ -213,7 +215,7 @@ function getStyles(colors) {
 .sd-gift-card.sd-unlocked .sd-gift-hint{color:${accent};font-weight:500}
 
 /* ---------- Notes ---------- */
-.sd-notes{margin:16px 14px 0;padding:14px;background:${bg};border:1px solid ${n200};border-radius:14px}
+.sd-notes{margin:12px 14px 0;padding:14px;background:${bg};border:1px solid ${n200};border-radius:14px}
 .sd-notes textarea{width:100%;min-height:70px;padding:11px 12px;border:1px solid ${n200};border-radius:10px;background:${bg};
   font-size:13px;line-height:1.5;resize:vertical;transition:border-color .16s,box-shadow .16s}
 .sd-notes textarea::placeholder{color:${n400}}
@@ -221,7 +223,7 @@ function getStyles(colors) {
 .sd-notes-count{text-align:right;font-size:11px;color:${n400};margin-top:6px;font-variant-numeric:tabular-nums}
 
 /* ---------- Trust badges ---------- */
-.sd-trust{margin:16px 14px 0;padding:14px;background:${bg};border:1px solid ${n200};border-radius:14px}
+.sd-trust{margin:12px 14px 0;padding:14px;background:${bg};border:1px solid ${n200};border-radius:14px}
 .sd-trust-head{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11.5px;font-weight:500;color:${n500};margin-bottom:11px}
 .sd-trust-head .sd-icon{color:${accent}}
 .sd-badges{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
@@ -231,7 +233,7 @@ function getStyles(colors) {
 .sd-badge svg{display:block}
 
 /* ---------- Confirmation ---------- */
-.sd-confirm{display:flex;align-items:flex-start;gap:10px;margin:16px 14px 0;padding:13px 14px;
+.sd-confirm{display:flex;align-items:flex-start;gap:10px;margin:12px 14px 0;padding:13px 14px;
   background:${bg};border:1px solid ${n200};border-radius:14px;cursor:pointer;user-select:none}
 .sd-checkbox{position:relative;display:flex;align-items:center;justify-content:center;width:19px;height:19px;
   border:1.5px solid ${n300};border-radius:6px;background:${bg};flex-shrink:0;margin-top:1px;transition:all .16s;color:transparent}
@@ -250,7 +252,7 @@ function getStyles(colors) {
 .sd-empty a:hover{background:${primaryDark};transform:translateY(-1px);box-shadow:0 6px 18px ${alpha(primary, 0.32)}}
 
 /* ---------- Footer ---------- */
-.sd-footer{flex-shrink:0;padding:14px 18px calc(16px + env(safe-area-inset-bottom,0px));background:${bg};border-top:1px solid ${n200};
+.sd-footer{flex-shrink:0;padding:12px 18px calc(13px + env(safe-area-inset-bottom,0px));background:${bg};border-top:1px solid ${n200};
   box-shadow:0 -8px 24px -16px rgba(9,9,11,.16)}
 .sd-footer:empty{display:none}
 .sd-footer-subtotal,.sd-footer-discount{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:6px}
@@ -259,7 +261,7 @@ function getStyles(colors) {
 .sd-footer-discount{color:${accent};font-weight:500}
 .sd-footer-discount span:first-child{display:flex;align-items:center;gap:5px;min-width:0}
 .sd-footer-discount span:last-child{font-variant-numeric:tabular-nums;flex-shrink:0}
-.sd-footer-total{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;margin-bottom:13px;border-top:1px solid ${n100}}
+.sd-footer-total{display:flex;justify-content:space-between;align-items:baseline;padding-top:9px;margin-bottom:11px;border-top:1px solid ${n100}}
 .sd-footer-total span:first-child{font-size:13.5px;font-weight:500;color:${n600};letter-spacing:-.006em}
 .sd-footer-total span:last-child{font-size:18px;font-weight:700;letter-spacing:-.022em;font-variant-numeric:tabular-nums;color:${text}}
 .sd-checkout-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:52px;border:none;border-radius:13px;
@@ -269,7 +271,6 @@ function getStyles(colors) {
 .sd-checkout-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px ${alpha(primary, 0.36)},inset 0 1px 0 rgba(255,255,255,.14)}
 .sd-checkout-btn:active{transform:translateY(0)}
 .sd-checkout-btn:disabled{opacity:.6;cursor:default;transform:none;box-shadow:none}
-.sd-footer-note{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:${n400};margin-top:10px}
 
 /* ---------- Checkout form ---------- */
 .sd-checkout-form{padding:18px}

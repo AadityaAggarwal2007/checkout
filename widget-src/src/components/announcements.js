@@ -16,7 +16,7 @@ function renderAnnouncements(container, config) {
 
   if (config.messages.length > 1) {
     var idx = 0;
-    var duration = (config.duration || 5) * 1000;
+    var duration = (config.duration || 3) * 1000;
 
     setInterval(function () {
       textEl.style.opacity = '0';
@@ -24,7 +24,7 @@ function renderAnnouncements(container, config) {
         idx = (idx + 1) % config.messages.length;
         textEl.textContent = config.messages[idx].text;
         textEl.style.opacity = '1';
-      }, 280);
+      }, 180);
     }, duration);
   }
 }
