@@ -19,7 +19,10 @@ function destinationFor(order, orderId, status) {
     return `${returnUrl}${sep}sd_order=${encodeURIComponent(orderId)}&sd_status=${encodeURIComponent(status)}`;
   }
 
-  return `${base}/order/${encodeURIComponent(orderId)}?status=${encodeURIComponent(status)}`;
+  // Defaults to the /api-prefixed mount, which the existing nginx proxy already
+  // routes here. Set ORDER_PAGE_BASE=/order once a location block exists.
+  const orderBase = process.env.ORDER_PAGE_BASE || '/api/order';
+  return `${base}${orderBase}/${encodeURIComponent(orderId)}?status=${encodeURIComponent(status)}`;
 }
 
 router.post('/create-order', async (req, res) => {

@@ -25,7 +25,11 @@ app.use('/api/stores', require('./routes/orders'));
 app.use('/api/widget', require('./routes/widget-api'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/shopify', require('./routes/shopify-auth'));
+// Mounted twice on purpose. The pretty /order/:id needs an nginx location
+// pointing at this server; /api/order/:id rides the /api proxy that already
+// exists, so the thank-you page works before any nginx change is made.
 app.use('/order', require('./routes/order-page'));
+app.use('/api/order', require('./routes/order-page'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
