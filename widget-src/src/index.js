@@ -166,6 +166,17 @@ var widgetApi = require('./utils/api');
 
       injectStyles(config.colors);
 
+      // Kicked off before the cart fetch rather than after wiring, so the
+      // carousel has the best chance of being ready the first time the drawer
+      // opens. Deliberately not awaited here — it must not delay the toggle.
+      var upsellsReady = widgetApi.get('/api/widget/upsell-products')
+        .then(function (products) {
+          if (Array.isArray(products)) drawer.setUpsellProducts(products);
+        })
+        .catch(function (e) {
+          console.error('ShopDrawer: upsell products failed to load', e);
+        });
+
       await cart.fetch_cart();
 
       cart.onChange(function () {
@@ -176,12 +187,7 @@ var widgetApi = require('./utils/api');
       hijackThemeCart();
       interceptAddToCart();
 
-      try {
-        var products = await widgetApi.get('/api/widget/upsell-products');
-        if (Array.isArray(products)) {
-          drawer.setUpsellProducts(products);
-        }
-      } catch (e) {}
+      await upsellsReady;
     } catch (err) {
       console.error('ShopDrawer: Failed to initialize', err);
     }

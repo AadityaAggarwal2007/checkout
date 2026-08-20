@@ -233,6 +233,14 @@ function toggle(config) {
 
 function setUpsellProducts(products) {
   upsellProducts = products || [];
+
+  // This resolves after init, which can land well after the drawer has already
+  // rendered — the Shopify lookup covers every configured handle and is slow.
+  // Without a re-render the carousel stays missing until the drawer is
+  // reopened, so it appears or vanishes depending on how fast the shopper is.
+  if (isOpen && upsellProducts.length && window._sdRerender) {
+    window._sdRerender();
+  }
 }
 
 module.exports = { create, open, close, toggle, render, setUpsellProducts };
