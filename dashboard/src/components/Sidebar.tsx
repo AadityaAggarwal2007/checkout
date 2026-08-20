@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/discounts', label: 'Discount Codes', icon: '🏷️' },
   { href: '/dashboard/trust-badges', label: 'Trust Badges', icon: '🛡️' },
   { href: '/dashboard/free-gifts', label: 'Free Gifts', icon: '🎀' },
+  { href: '/dashboard/post-purchase', label: 'After Payment', icon: '🧾' },
   { href: '/dashboard/settings', label: 'Settings', icon: '⚙️' },
   { href: '/dashboard/colors', label: 'Colors', icon: '🎨' },
 ];

@@ -159,6 +159,23 @@ var widgetApi = require('./utils/api');
     };
   }
 
+  // The gateway sends shoppers back to the storefront with these params when
+  // postPurchase.mode is "store". Strip them afterwards so a refresh or a
+  // shared link doesn't replay the confirmation over a live cart.
+  function showOrderResultIfReturning() {
+    var params = new URLSearchParams(window.location.search);
+    var orderId = params.get('sd_order');
+    if (!orderId) return;
+
+    var status = params.get('sd_status') === 'success' ? 'success' : 'failed';
+    drawer.showOrderResult(config, status);
+
+    params.delete('sd_order');
+    params.delete('sd_status');
+    var qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+  }
+
   async function init() {
     try {
       config = await widgetApi.get('/api/widget/config');
@@ -188,6 +205,8 @@ var widgetApi = require('./utils/api');
       interceptAddToCart();
 
       await upsellsReady;
+
+      showOrderResultIfReturning();
     } catch (err) {
       console.error('ShopDrawer: Failed to initialize', err);
     }

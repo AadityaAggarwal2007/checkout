@@ -8,7 +8,8 @@ router.use(authenticate);
 
 const VALID_SECTIONS = [
   'announcements', 'rewardBar', 'upsells', 'addons', 'notes',
-  'confirmation', 'discounts', 'trustBadges', 'freeGifts', 'settings', 'colors'
+  'confirmation', 'discounts', 'trustBadges', 'freeGifts', 'settings', 'colors',
+  'postPurchase'
 ];
 
 router.get('/:storeId/config', storeAccess, async (req, res) => {

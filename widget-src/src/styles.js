@@ -316,6 +316,7 @@ function getStyles(colors) {
 .sd-success{display:flex;flex-direction:column;align-items:center;text-align:center;padding:56px 28px}
 .sd-success-icon{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;
   background:${alpha(accent, 0.12)};color:${accent};margin-bottom:18px;animation:sd-pop .42s cubic-bezier(.32,1.6,.5,1)}
+.sd-success-icon.sd-failed{background:#FEF2F2;color:#DC2626}
 @keyframes sd-pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 .sd-success h4{font-size:17px;font-weight:600;letter-spacing:-.018em;margin-bottom:6px}
 .sd-success p{font-size:13px;color:${n500};line-height:1.5}

@@ -6,6 +6,22 @@ const shopify = require('../services/shopify');
 
 const router = express.Router();
 
+// Where the shopper lands once PayGlocal hands them back. "hosted" serves our
+// own branded confirmation; "store" returns them to the storefront, where the
+// widget picks up the sd_order/sd_status params and reopens the drawer.
+function destinationFor(order, orderId, status) {
+  const cfg = (order.store.config && order.store.config.postPurchase) || {};
+  const base = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
+
+  if (cfg.mode === 'store') {
+    const returnUrl = cfg.returnUrl || `https://${order.store.shopifyUrl}`;
+    const sep = returnUrl.indexOf('?') === -1 ? '?' : '&';
+    return `${returnUrl}${sep}sd_order=${encodeURIComponent(orderId)}&sd_status=${encodeURIComponent(status)}`;
+  }
+
+  return `${base}/order/${encodeURIComponent(orderId)}?status=${encodeURIComponent(status)}`;
+}
+
 router.post('/create-order', async (req, res) => {
   try {
     const { key, items, contact, address, coupon, notes, paymentMethod } = req.body;
@@ -108,7 +124,7 @@ router.post('/callback', async (req, res) => {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { store: true }
+      include: { store: { include: { config: true } } }
     });
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -142,7 +158,7 @@ router.post('/callback', async (req, res) => {
       });
     }
 
-    res.redirect(`${process.env.WIDGET_CALLBACK_URL || '/'}?orderId=${orderId}&status=${status}`);
+    res.redirect(destinationFor(order, orderId, status));
   } catch (err) {
     console.error('Payment callback error:', err);
     res.status(500).json({ error: 'Callback processing failed' });

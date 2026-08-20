@@ -241,6 +241,60 @@ function toggle(config) {
   else open(config);
 }
 
+// Shown when the shopper returns from the gateway with sd_order/sd_status,
+// instead of dropping them on a storefront page with no sign the order landed.
+function showOrderResult(config, status) {
+  if (!drawer) create(config);
+
+  activeConfig = config;
+  inCheckout = true;
+  isOpen = true;
+  overlay.classList.add('sd-open');
+  drawer.classList.add('sd-open');
+  document.body.style.overflow = 'hidden';
+
+  var footer = document.getElementById('sd-footer');
+  footer.innerHTML = '';
+  body.innerHTML = '';
+
+  var cfg = (config && config.postPurchase) || {};
+  var ok = status === 'success';
+
+  var wrap = document.createElement('div');
+  wrap.className = 'sd-success';
+
+  var iconWrap = document.createElement('div');
+  iconWrap.className = 'sd-success-icon' + (ok ? '' : ' sd-failed');
+  iconWrap.innerHTML = icons.get(ok ? 'checkCircle' : 'alert', 30, 1.8);
+  wrap.appendChild(iconWrap);
+
+  var h = document.createElement('h4');
+  h.textContent = ok
+    ? (cfg.title || 'Thank you for your order!')
+    : (cfg.failedTitle || 'Payment was not completed');
+  wrap.appendChild(h);
+
+  var p = document.createElement('p');
+  p.textContent = ok
+    ? (cfg.message || 'We have received your order and will send updates to your phone.')
+    : (cfg.failedMessage || 'No money has been taken. You can try placing the order again.');
+  wrap.appendChild(p);
+
+  var btn = document.createElement('button');
+  btn.className = 'sd-checkout-btn';
+  btn.type = 'button';
+  btn.style.marginTop = '22px';
+  btn.innerHTML = '<span>' + (ok ? (cfg.continueText || 'Continue shopping') : 'Back to cart') + '</span>';
+  btn.onclick = function () {
+    inCheckout = false;
+    if (ok && cfg.continueUrl) { window.location.href = cfg.continueUrl; return; }
+    close();
+  };
+  wrap.appendChild(btn);
+
+  body.appendChild(wrap);
+}
+
 function setUpsellProducts(products) {
   upsellProducts = products || [];
 
@@ -253,4 +307,4 @@ function setUpsellProducts(products) {
   }
 }
 
-module.exports = { create, open, close, toggle, render, setUpsellProducts };
+module.exports = { create, open, close, toggle, render, setUpsellProducts, showOrderResult };

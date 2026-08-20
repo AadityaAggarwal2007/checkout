@@ -25,6 +25,7 @@ app.use('/api/stores', require('./routes/orders'));
 app.use('/api/widget', require('./routes/widget-api'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/shopify', require('./routes/shopify-auth'));
+app.use('/order', require('./routes/order-page'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

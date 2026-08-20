@@ -63,6 +63,7 @@ model DrawerConfig {
   freeGifts     Json     @default("[]") @map("free_gifts")
   settings      Json     @default("{}")
   colors        Json     @default("{}")
+  postPurchase  Json     @default("{}") @map("post_purchase")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
