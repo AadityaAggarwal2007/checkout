@@ -100,8 +100,11 @@ function getStyles(colors) {
 .sd-milestone.sd-reached .sd-milestone-icon{background:${primary};border-color:${primary};color:#fff;box-shadow:0 0 0 3px ${alpha(primary, 0.15)}}
 .sd-milestone.sd-next .sd-milestone-icon{border-color:${primary};color:${primary};background:${alpha(primary, 0.08)};
   box-shadow:0 0 0 3px ${alpha(primary, 0.1)};transform:scale(1.13)}
-.sd-milestone-label{position:absolute;top:calc(100% + 6px);white-space:nowrap;font-size:10px;line-height:1.2;
-  color:${n500};text-align:center;letter-spacing:-.002em;max-width:68px;overflow:hidden;text-overflow:ellipsis}
+.sd-milestone-label{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;
+  font-size:10px;line-height:1.2;color:${n500};text-align:center;letter-spacing:-.002em;
+  max-width:74px;overflow:hidden;text-overflow:ellipsis}
+.sd-milestone.sd-edge-start .sd-milestone-label{left:-3px;transform:none;text-align:left}
+.sd-milestone.sd-edge-end .sd-milestone-label{left:auto;right:-3px;transform:none;text-align:right}
 .sd-milestone.sd-reached .sd-milestone-label{color:${text};font-weight:600}
 .sd-milestone.sd-next .sd-milestone-label{color:${primary};font-weight:600}
 

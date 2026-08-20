@@ -51,8 +51,12 @@ function renderRewardBar(container, config, cartTotal) {
     var isNext = tier === nextTier;
     var pos = (tier.threshold / maxThreshold) * 100;
 
+    // First and last labels are anchored to the track edges — centering them on
+    // a dot at 0%/100% pushes half the text outside the card.
+    var edge = j === 0 ? ' sd-edge-start' : (j === sorted.length - 1 ? ' sd-edge-end' : '');
+
     var ms = document.createElement('div');
-    ms.className = 'sd-milestone' + (reached ? ' sd-reached' : '') + (isNext ? ' sd-next' : '');
+    ms.className = 'sd-milestone' + (reached ? ' sd-reached' : '') + (isNext ? ' sd-next' : '') + edge;
     ms.style.left = pos + '%';
 
     var iconEl = document.createElement('div');
