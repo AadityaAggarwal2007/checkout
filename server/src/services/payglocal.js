@@ -11,6 +11,7 @@ const BASE_URL = process.env.PAYGLOCAL_ENV === 'production'
   ? 'https://api.payglocal.in'
   : 'https://api.uat.payglocal.in';
 const CALLBACK_URL = process.env.PAYGLOCAL_CALLBACK_URL;
+const TOKEN_EXPIRY_MS = 300000;
 
 let _pgPublicKey = null;
 let _merchantPrivateKey = null;
@@ -32,15 +33,37 @@ async function generateJWE(payload) {
   await loadKeys();
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
   return new CompactEncrypt(plaintext)
-    .setProtectedHeader({ alg: 'RSA-OAEP-256', enc: 'A128GCM', kid: PUBLIC_KEY_ID })
+    .setProtectedHeader({
+      alg: 'RSA-OAEP-256',
+      enc: 'A128CBC-HS256',
+      kid: PUBLIC_KEY_ID,
+      'issued-by': MID,
+      exp: TOKEN_EXPIRY_MS,
+      iat: `${Date.now()}`
+    })
     .encrypt(_pgPublicKey);
 }
 
 async function generateJWS(jweToken) {
   await loadKeys();
-  const payload = new TextEncoder().encode(jweToken);
-  return new CompactSign(payload)
-    .setProtectedHeader({ alg: 'RS256', kid: PRIVATE_KEY_ID })
+  const digest = crypto.createHash('sha256').update(jweToken).digest('base64');
+  const digestObject = {
+    digest,
+    digestAlgorithm: 'SHA-256',
+    exp: TOKEN_EXPIRY_MS,
+    iat: `${Date.now()}`
+  };
+  return new CompactSign(
+    new TextEncoder().encode(JSON.stringify(digestObject))
+  )
+    .setProtectedHeader({
+      alg: 'RS256',
+      kid: PRIVATE_KEY_ID,
+      'x-gl-merchantId': MID,
+      'issued-by': MID,
+      'is-digested': 'true',
+      'x-gl-enc': 'true'
+    })
     .sign(_merchantPrivateKey);
 }
 
