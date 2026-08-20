@@ -83,23 +83,27 @@ function getStyles(colors) {
 
 /* ---------- Reward bar ---------- */
 .sd-reward-bar{margin:12px 14px 0;padding:15px 16px 13px;background:${bg};border:1px solid ${n200};border-radius:14px}
-.sd-reward-text{font-size:12.5px;color:${n600};letter-spacing:-.004em;margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.sd-reward-text{font-size:13px;color:${n600};letter-spacing:-.004em;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:6px}
 .sd-reward-text b{color:${text};font-weight:600}
 .sd-reward-text .sd-icon{color:${primary};flex-shrink:0}
-.sd-reward-track{position:relative;height:6px;background:${n100};border-radius:999px;overflow:hidden}
+.sd-reward-track-wrap{position:relative;padding:0 16px;margin-bottom:28px}
+.sd-reward-track{position:relative;height:5px;background:${n200};border-radius:999px}
 .sd-reward-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,${primaryLight},${primary});
   transition:width .62s cubic-bezier(.32,.72,0,1);position:relative}
 .sd-reward-fill::after{content:'';position:absolute;inset:0;border-radius:999px;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);
   animation:sd-shimmer 2.2s ease-in-out infinite}
 @keyframes sd-shimmer{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
-.sd-reward-milestones{display:flex;justify-content:space-between;margin-top:13px;gap:4px}
-.sd-milestone{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0}
+.sd-milestone{position:absolute;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
 .sd-milestone-icon{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;
-  background:${bg};border:1.5px solid ${n200};color:${n400};transition:all .3s cubic-bezier(.32,.72,0,1)}
-.sd-milestone-icon.sd-reached{background:${primary};border-color:${primary};color:#fff;box-shadow:0 0 0 4px ${alpha(primary, 0.12)}}
-.sd-milestone-label{font-size:10.5px;line-height:1.3;color:${n500};text-align:center;letter-spacing:-.002em}
-.sd-milestone.sd-reached .sd-milestone-label{color:${text};font-weight:500}
+  background:${bg};border:2.5px solid ${n200};color:${n400};transition:all .3s cubic-bezier(.32,.72,0,1);z-index:1}
+.sd-milestone.sd-reached .sd-milestone-icon{background:${primary};border-color:${primary};color:#fff;box-shadow:0 0 0 3px ${alpha(primary, 0.15)}}
+.sd-milestone.sd-next .sd-milestone-icon{border-color:${primary};color:${primary};background:${alpha(primary, 0.08)};
+  box-shadow:0 0 0 3px ${alpha(primary, 0.1)};transform:scale(1.13)}
+.sd-milestone-label{position:absolute;top:calc(100% + 6px);white-space:nowrap;font-size:10px;line-height:1.2;
+  color:${n500};text-align:center;letter-spacing:-.002em;max-width:68px;overflow:hidden;text-overflow:ellipsis}
+.sd-milestone.sd-reached .sd-milestone-label{color:${text};font-weight:600}
+.sd-milestone.sd-next .sd-milestone-label{color:${primary};font-weight:600}
 
 /* ---------- Product rows ---------- */
 .sd-items{margin:12px 14px 0;background:${bg};border:1px solid ${n200};border-radius:14px;overflow:hidden}

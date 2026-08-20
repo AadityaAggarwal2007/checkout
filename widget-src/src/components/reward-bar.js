@@ -27,13 +27,15 @@ function renderRewardBar(container, config, cartTotal) {
   text.className = 'sd-reward-text';
   if (nextTier) {
     var away = nextTier.threshold - cartTotal;
-    text.innerHTML = icons.get(TIER_ICONS[nextTier.type] || 'star', 15) +
-      '<span>Add <b>₹' + away.toFixed(0) + '</b> more to unlock <b>' + nextTier.label + '</b></span>';
+    text.innerHTML = '<span>You\'re <b>₹' + away.toFixed(0) + '</b> away</span>';
   } else {
     text.innerHTML = icons.get('checkCircle', 15) +
-      '<span>All rewards unlocked — <b>nice one</b></span>';
+      '<span>All rewards unlocked!</span>';
   }
   el.appendChild(text);
+
+  var trackWrap = document.createElement('div');
+  trackWrap.className = 'sd-reward-track-wrap';
 
   var track = document.createElement('div');
   track.className = 'sd-reward-track';
@@ -41,23 +43,23 @@ function renderRewardBar(container, config, cartTotal) {
   fill.className = 'sd-reward-fill';
   fill.style.width = pct + '%';
   track.appendChild(fill);
-  el.appendChild(track);
-
-  var milestones = document.createElement('div');
-  milestones.className = 'sd-reward-milestones';
+  trackWrap.appendChild(track);
 
   for (var j = 0; j < sorted.length; j++) {
     var tier = sorted[j];
     var reached = cartTotal >= tier.threshold;
+    var isNext = tier === nextTier;
+    var pos = (tier.threshold / maxThreshold) * 100;
 
     var ms = document.createElement('div');
-    ms.className = 'sd-milestone' + (reached ? ' sd-reached' : '');
+    ms.className = 'sd-milestone' + (reached ? ' sd-reached' : '') + (isNext ? ' sd-next' : '');
+    ms.style.left = pos + '%';
 
     var iconEl = document.createElement('div');
-    iconEl.className = 'sd-milestone-icon' + (reached ? ' sd-reached' : '');
+    iconEl.className = 'sd-milestone-icon';
     iconEl.innerHTML = reached
-      ? icons.get('check', 15, 2.4)
-      : icons.get(TIER_ICONS[tier.type] || 'star', 15);
+      ? icons.get('check', 14, 2.4)
+      : icons.get(TIER_ICONS[tier.type] || 'star', 14);
     ms.appendChild(iconEl);
 
     var label = document.createElement('div');
@@ -65,7 +67,7 @@ function renderRewardBar(container, config, cartTotal) {
     label.textContent = tier.label;
     ms.appendChild(label);
 
-    milestones.appendChild(ms);
+    trackWrap.appendChild(ms);
 
     if (reached && !reachedTiers[tier.label] && config.confetti && config.confetti.enabled) {
       reachedTiers[tier.label] = true;
@@ -73,7 +75,7 @@ function renderRewardBar(container, config, cartTotal) {
     }
   }
 
-  el.appendChild(milestones);
+  el.appendChild(trackWrap);
   container.appendChild(el);
 }
 
