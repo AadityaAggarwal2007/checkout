@@ -37,7 +37,7 @@ export default function SettingsPage() {
   if (!store) return null;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-[1500px]">
       <h2 className="text-2xl font-bold mb-6">Settings</h2>
       <ConfigForm storeId={store.id} section="settings" data={config}>
         <div className="bg-white rounded-xl border p-6 space-y-4">

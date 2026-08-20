@@ -68,7 +68,7 @@ export default function UpsellsPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-[1500px]">
       <h2 className="text-2xl font-bold mb-6">Upsells</h2>
       <ConfigForm storeId={store.id} section="upsells" data={config}>
         <div className="bg-white rounded-xl border p-6 space-y-4">

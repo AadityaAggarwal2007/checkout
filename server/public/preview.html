@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopDrawer preview</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #FAFAFA; overflow: hidden; }
+
+  /* The drawer is built to slide in over a storefront. Inside the preview frame
+     it IS the page, so the backdrop is hidden and the panel is pinned flush. */
+  .sd-overlay { display: none !important; }
+  .sd-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    transition: none !important;
+  }
+
+  #sd-preview-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; padding: 24px; box-sizing: border-box;
+    font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #A1A1AA; text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="sd-preview-empty">Loading preview…</div>
+<script src="/preview.js"></script>
+<script>
+  // Once the first config lands the drawer covers the frame; drop the placeholder.
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'shopdrawer:config') {
+      var ph = document.getElementById('sd-preview-empty');
+      if (ph) ph.remove();
+    }
+  });
+</script>
+</body>
+</html>

@@ -42,7 +42,7 @@ export default function AnnouncementsPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-[1500px]">
       <h2 className="text-2xl font-bold mb-6">Announcements</h2>
       <ConfigForm storeId={store.id} section="announcements" data={config}>
         <div className="bg-white rounded-xl border p-6 space-y-4">

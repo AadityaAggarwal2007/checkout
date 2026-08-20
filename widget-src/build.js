@@ -3,23 +3,34 @@ const path = require('path');
 
 const isWatch = process.argv.includes('--watch');
 
-const config = {
-  entryPoints: [path.join(__dirname, 'src/index.js')],
+const shared = {
   bundle: true,
-  outfile: path.join(__dirname, '../server/public/widget.js'),
   format: 'iife',
   minify: !isWatch,
   target: ['es2018'],
-  globalName: 'ShopDrawer',
 };
 
+const builds = [
+  {
+    ...shared,
+    entryPoints: [path.join(__dirname, 'src/index.js')],
+    outfile: path.join(__dirname, '../server/public/widget.js'),
+    globalName: 'ShopDrawer',
+  },
+  // Dashboard preview — same components, mocked cart. Kept a separate entry so
+  // the storefront bundle never ships the sample data or the fetch stub.
+  {
+    ...shared,
+    entryPoints: [path.join(__dirname, 'src/preview.js')],
+    outfile: path.join(__dirname, '../server/public/preview.js'),
+    globalName: 'ShopDrawerPreviewBundle',
+  },
+];
+
 if (isWatch) {
-  esbuild.context(config).then(ctx => {
-    ctx.watch();
-    console.log('Watching for widget changes...');
-  });
+  Promise.all(builds.map(cfg => esbuild.context(cfg).then(ctx => ctx.watch())))
+    .then(() => console.log('Watching for widget changes...'));
 } else {
-  esbuild.build(config).then(() => {
-    console.log('Widget built successfully');
-  });
+  Promise.all(builds.map(cfg => esbuild.build(cfg)))
+    .then(() => console.log('Widget + preview built successfully'));
 }

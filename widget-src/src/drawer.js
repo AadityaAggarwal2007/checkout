@@ -15,8 +15,14 @@ var checkoutForm = require('./components/checkout-form');
 var overlay, drawer, body, countEl, isOpen = false;
 var upsellProducts = [];
 var inCheckout = false;
+// Held at module scope rather than captured in create()'s closure so that a
+// config replaced after mount (the dashboard preview does this on every
+// keystroke) is picked up by cart-change re-renders too.
+var activeConfig = null;
 
 function create(config) {
+  activeConfig = config;
+
   overlay = document.createElement('div');
   overlay.className = 'sd-overlay';
   overlay.onclick = close;
@@ -67,7 +73,7 @@ function create(config) {
     if (e.key === 'Escape' && isOpen) close();
   });
 
-  cart.onChange(function () { render(config); });
+  cart.onChange(function () { render(activeConfig); });
 }
 
 function renderEmpty(settings) {
@@ -99,12 +105,16 @@ function renderEmpty(settings) {
 }
 
 function render(config) {
+  if (config) activeConfig = config;
+  config = activeConfig;
+  if (!config) return;
+
   if (inCheckout) return;
   body.innerHTML = '';
   var footer = document.getElementById('sd-footer');
   footer.innerHTML = '';
 
-  window._sdRerender = function () { render(config); };
+  window._sdRerender = function () { render(null); };
 
   var cartData = cart.getCart();
   var total = cart.getTotal();
