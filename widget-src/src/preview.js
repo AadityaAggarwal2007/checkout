@@ -8,6 +8,10 @@ var cart = require('./cart');
 var drawer = require('./drawer');
 var styles = require('./styles');
 
+// Inline so the preview never depends on a network image; an empty src renders
+// as a broken-image icon and makes the layout look wrong for no reason.
+var PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23F1F1F3'/%3E%3Cpath d='M38 74l16-19 11 13 8-9 12 15z' fill='%23D9D9DE'/%3E%3Ccircle cx='47' cy='45' r='7' fill='%23D9D9DE'/%3E%3C/svg%3E";
+
 var SAMPLE_ITEMS = [
   {
     id: 1, variant_id: 1, product_id: 1, key: 'sd-preview-1',
@@ -15,7 +19,7 @@ var SAMPLE_ITEMS = [
     product_title: 'Black Elephant Print Cotton Spaghetti Top',
     variant_title: 'Black / S', quantity: 1,
     price: 25900, line_price: 25900, original_line_price: 59900, original_price: 59900,
-    image: '', url: '#'
+    image: PLACEHOLDER, url: '#'
   },
   {
     id: 2, variant_id: 2, product_id: 2, key: 'sd-preview-2',
@@ -23,15 +27,15 @@ var SAMPLE_ITEMS = [
     product_title: 'Indigo Blue Dabu Print Sleeveless Cotton Crop Kurti',
     variant_title: 'Blue / M', quantity: 2,
     price: 51800, line_price: 103600, original_line_price: 129800, original_price: 64900,
-    image: '', url: '#'
+    image: PLACEHOLDER, url: '#'
   }
 ];
 
 var SAMPLE_UPSELLS = [
-  { title: 'Ivory Mughal Buta Print Top', images: [], variants: [{ id: 91, price: 799 }] },
-  { title: 'Lilac Floral Buta Print Top', images: [], variants: [{ id: 92, price: 899 }] },
-  { title: 'Bottle Green Block Print Top', images: [], variants: [{ id: 93, price: 749 }] },
-  { title: 'Black Gold Elephant Short Kurti', images: [], variants: [{ id: 94, price: 1149 }] }
+  { title: 'Ivory Mughal Buta Print Top', images: [{ src: PLACEHOLDER }], variants: [{ id: 91, price: 799 }] },
+  { title: 'Lilac Floral Buta Print Top', images: [{ src: PLACEHOLDER }], variants: [{ id: 92, price: 899 }] },
+  { title: 'Bottle Green Block Print Top', images: [{ src: PLACEHOLDER }], variants: [{ id: 93, price: 749 }] },
+  { title: 'Black Gold Elephant Short Kurti', images: [{ src: PLACEHOLDER }], variants: [{ id: 94, price: 1149 }] }
 ];
 
 var state = null;
@@ -98,7 +102,7 @@ function installCartStub() {
           title: 'Added product', product_title: 'Added product', variant_title: '',
           quantity: body.quantity || 1, price: 79900,
           line_price: 79900, original_line_price: 79900, original_price: 79900,
-          image: '', url: '#'
+          image: PLACEHOLDER, url: '#'
         });
       }
       recalc();
