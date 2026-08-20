@@ -27,7 +27,9 @@
 </head>
 <body>
 <div id="sd-preview-empty">Loading preview…</div>
-<script src="/preview.js"></script>
+<!-- Relative on purpose: this page is served from both / and /api/preview/,
+     and the bundle has to resolve against whichever one loaded it. -->
+<script src="preview.js"></script>
 <script>
   // Once the first config lands the drawer covers the frame; drop the placeholder.
   window.addEventListener('message', function (e) {

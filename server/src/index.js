@@ -14,6 +14,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
+// The proxy in front of this server only routes /widget.js and /api/* here —
+// anything else static falls through to the dashboard's Next.js app and 404s.
+// Re-exposing public/ under /api/preview lets the dashboard load the preview
+// page without a proxy change. Nothing secret lives in public/.
+app.use('/api/preview', express.static(path.join(__dirname, '../public')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 

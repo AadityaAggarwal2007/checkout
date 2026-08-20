@@ -70,7 +70,7 @@ export default function DrawerPreview({ storeId, section, draft, savedAt }: Draw
         <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
           <iframe
             ref={iframeRef}
-            src={`${API_URL}/preview.html`}
+            src={`${API_URL}/api/preview/preview.html`}
             title="Drawer preview"
             className="block w-full h-[680px] border-0"
           />
