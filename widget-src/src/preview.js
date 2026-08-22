@@ -131,8 +131,18 @@ function installCartStub() {
       return json(state);
     }
 
-    // Coupon validation runs against whatever codes the draft config defines,
-    // so a code typed here matches what the storefront would accept on save.
+    if (u.indexOf('/api/widget/lookup-address') !== -1) {
+      return json({
+        found: true,
+        name: 'Priya Sharma',
+        email: 'priya@example.com',
+        address: {
+          line1: '42, Lotus Apartments', line2: 'Lajpat Nagar',
+          city: 'New Delhi', state: 'Delhi', pincode: '110024'
+        }
+      });
+    }
+
     if (u.indexOf('/api/widget/validate-coupon') !== -1) {
       var codes = (window.__sdPreviewConfig && window.__sdPreviewConfig.discounts &&
         window.__sdPreviewConfig.discounts.codes) || [];

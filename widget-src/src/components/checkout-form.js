@@ -47,6 +47,8 @@ function showCheckoutForm(container, cartData, config, onBack, couponCode, coupo
     line1: '', line2: '', city: '', state: '', pincode: '',
     paymentMethod: methods[0].id
   };
+  var autofilled = false;
+  var lookingUp = false;
 
   var subtotal = cartData ? cartData.total_price / 100 : 0;
   var total = Math.max(0, subtotal - (couponDiscount || 0));
@@ -84,6 +86,100 @@ function showCheckoutForm(container, cartData, config, onBack, couponCode, coupo
     form.appendChild(steps);
   }
 
+  var geoLocating = false;
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      flagError('Location is not supported by your browser');
+      return;
+    }
+    geoLocating = true;
+    var locBtn = container.querySelector('.sd-locate-btn');
+    if (locBtn) {
+      locBtn.disabled = true;
+      locBtn.innerHTML = icons.get('mapPin', 14) + '<span>Locating…</span>';
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        var lat = pos.coords.latitude;
+        var lon = pos.coords.longitude;
+        fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lon + '&addressdetails=1&accept-language=en')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var addr = data.address || {};
+            if (!formData.line1) {
+              var road = addr.road || addr.neighbourhood || addr.suburb || '';
+              if (road) formData.line2 = road;
+            }
+            if (addr.city || addr.town || addr.village || addr.state_district) {
+              formData.city = addr.city || addr.town || addr.village || addr.state_district || '';
+            }
+            if (addr.postcode) formData.pincode = addr.postcode;
+            if (addr.state) {
+              for (var i = 0; i < INDIAN_STATES.length; i++) {
+                if (INDIAN_STATES[i].toLowerCase() === addr.state.toLowerCase() ||
+                    addr.state.toLowerCase().indexOf(INDIAN_STATES[i].toLowerCase()) !== -1) {
+                  formData.state = INDIAN_STATES[i];
+                  break;
+                }
+              }
+            }
+            autofilled = true;
+            geoLocating = false;
+            render();
+          })
+          .catch(function () {
+            geoLocating = false;
+            flagError('Could not determine address from your location');
+            if (locBtn) {
+              locBtn.disabled = false;
+              locBtn.innerHTML = icons.get('mapPin', 14) + '<span>Use my location</span>';
+            }
+          });
+      },
+      function () {
+        geoLocating = false;
+        flagError('Location access was denied');
+        if (locBtn) {
+          locBtn.disabled = false;
+          locBtn.innerHTML = icons.get('mapPin', 14) + '<span>Use my location</span>';
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  function lookupAndContinue() {
+    var btn = container.querySelector('.sd-checkout-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Looking up…</span>';
+    }
+    lookingUp = true;
+
+    widgetApi.post('/api/widget/lookup-address', { phone: formData.phone })
+      .then(function (res) {
+        if (res && res.found) {
+          if (res.name && !formData.name) formData.name = res.name;
+          if (res.email && !formData.email) formData.email = res.email;
+          var addr = res.address || {};
+          if (addr.line1) formData.line1 = addr.line1;
+          if (addr.line2) formData.line2 = addr.line2;
+          if (addr.city) formData.city = addr.city;
+          if (addr.state) formData.state = addr.state;
+          if (addr.pincode) formData.pincode = addr.pincode;
+          autofilled = true;
+        }
+      })
+      .catch(function () {})
+      .then(function () {
+        lookingUp = false;
+        step = 2;
+        render();
+      });
+  }
+
   function render() {
     container.innerHTML = '';
 
@@ -113,11 +209,26 @@ function showCheckoutForm(container, cartData, config, onBack, couponCode, coupo
           flagError('Enter a valid 10-digit phone number');
           return;
         }
-        step = 2;
-        render();
+        lookupAndContinue();
       }));
     } else if (step === 2) {
+      if (autofilled) {
+        var banner = document.createElement('div');
+        banner.className = 'sd-autofill-banner';
+        banner.innerHTML = icons.get('check', 14, 2.2) + '<span>Welcome back! We filled in your last address.</span>';
+        form.appendChild(banner);
+      }
       form.appendChild(heading('Delivery address', 'Where should we send your order?'));
+
+      if (navigator.geolocation) {
+        var locBtn = document.createElement('button');
+        locBtn.type = 'button';
+        locBtn.className = 'sd-locate-btn';
+        locBtn.innerHTML = icons.get('mapPin', 14) + '<span>Use my location</span>';
+        locBtn.onclick = useMyLocation;
+        form.appendChild(locBtn);
+      }
+
       form.appendChild(makeInput('Address line 1', 'line1', 'text', 'House / flat, building'));
       form.appendChild(makeInput('Address line 2 (optional)', 'line2', 'text', 'Street, locality'));
 

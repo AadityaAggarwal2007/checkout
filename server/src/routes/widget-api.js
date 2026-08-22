@@ -64,6 +64,43 @@ router.get('/upsell-products', async (req, res) => {
   }
 });
 
+router.post('/lookup-address', async (req, res) => {
+  try {
+    const { key, phone } = req.body;
+    if (!key || !phone) return res.status(400).json({ found: false });
+
+    const store = await getStoreByKey(key);
+    if (!store) return res.status(404).json({ found: false });
+
+    const digits = phone.replace(/\D/g, '').slice(-10);
+    if (digits.length < 10) return res.json({ found: false });
+
+    const order = await prisma.order.findFirst({
+      where: {
+        storeId: store.id,
+        customerPhone: { contains: digits }
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        customerName: true,
+        customerEmail: true,
+        address: true
+      }
+    });
+
+    if (!order || !order.address) return res.json({ found: false });
+
+    res.json({
+      found: true,
+      name: order.customerName || '',
+      email: order.customerEmail || '',
+      address: order.address
+    });
+  } catch (err) {
+    res.json({ found: false });
+  }
+});
+
 router.post('/validate-coupon', async (req, res) => {
   try {
     const { key, code } = req.body;

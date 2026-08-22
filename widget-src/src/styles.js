@@ -289,6 +289,12 @@ function getStyles(colors) {
 .sd-step-line{flex:1;height:1.5px;background:${n200};margin:0 6px;position:relative;top:-9px;border-radius:999px;transition:background .3s}
 .sd-step-line.sd-done{background:${accent}}
 .sd-checkout-form h4{font-size:16px;font-weight:600;letter-spacing:-.017em;margin-bottom:4px}
+.sd-autofill-banner{display:flex;align-items:center;gap:7px;padding:10px 13px;margin-bottom:14px;border-radius:10px;background:${shade(accent,0.94)};color:${accent};font-size:12.5px;font-weight:500;letter-spacing:-.004em}
+.sd-autofill-banner svg{flex-shrink:0}
+.sd-locate-btn{display:flex;align-items:center;gap:6px;padding:9px 14px;margin-bottom:14px;border:1.5px dashed ${shade(accent,0.7)};border-radius:10px;background:${shade(accent,0.96)};color:${accent};font-size:13px;font-weight:500;cursor:pointer;width:100%;justify-content:center;letter-spacing:-.004em;transition:background .15s}
+.sd-locate-btn:hover{background:${shade(accent,0.91)}}
+.sd-locate-btn:disabled{opacity:.6;cursor:default}
+.sd-locate-btn svg{flex-shrink:0}
 .sd-form-sub{font-size:12.5px;color:${n500};margin-bottom:18px}
 .sd-form-group{margin-bottom:13px}
 .sd-form-group label{display:block;font-size:12px;font-weight:500;color:${n600};margin-bottom:6px;letter-spacing:-.004em}
