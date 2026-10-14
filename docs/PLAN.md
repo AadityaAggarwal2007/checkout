@@ -93,6 +93,15 @@ server syntax + `prisma generate` OK):
    coupons, payments, RTO, analytics). The Shopify app only installs (OAuth), turns the drawer on through the theme
    app embed, and links to our dashboard. No settings inside Shopify admin.
 
+## Owner's answers after all screenshots (2026-10-14)
+
+1. **Partial COD:** the merchant sets it per store (fixed ₹ OR % of the order paid up front; rest on delivery).
+2. **Shipping rates:** ONLY in our dashboard (no Shopify shipping sync). Merchant builds zones / rates / price or weight
+   slabs / COD per slab / blocked pincodes there.
+3. **Integrations in v1:** **Meta Pixel** only (checkout started, add payment info, purchase events). Others later.
+4. **Billing:** **1% of every successful order** (paid, or COD confirmed). Cancelled / failed / refunded orders are not
+   charged. Rate stored per store so it can change later.
+
 ## Design rules decided while reading FlexyPe (keep when building)
 
 1. **A shipping charge is never shown under a "Free" name** (owner 2026-10-14, from FlexyPe order #2246: the rate was
