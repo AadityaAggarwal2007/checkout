@@ -510,6 +510,31 @@ NOT SEEN: phone (mobile) layout of drawer / checkout, the address entry for a NE
    thank-you screen after payment, a failed payment.
 ```
 
+### (d) Phone video (owner's WhatsApp video, 24 s, iPhone, kurtiya.shop)
+
+```text
+V00-03 Product page on the phone: sticky bottom bar (variant select "Silver / pack-of-3 - R…" + Add to cart), chat bubble;
+   Buy it now.
+V03 "Creating your order..." full screen + FlexyPe logo (on the phone the checkout is a FULL-SCREEN page, not a popup).
+V03-07 MOBILE CHECKOUT (one scrolling page): top bar ‹ back, store logo, ₹599 struck → ₹154, "1 item ˅" (order summary
+   folds into the top bar = "Order summary Layout 2"); purple banner carousel; DELIVERY ADDRESS card ALREADY FILLED (name +
+   HOME tag, address, phone, email, ✎ Edit) for a returning shopper on the same phone; shipping line "Free shipping ₹30.00"
+   (again: a ₹30 charge under a "Free" name, design rule 1); Free gifts for you (locked card + progress "Add items worth
+   ₹175 or more…"); Coupons ›; MOST LIKED upsell with timer "⏱ 3m:00s" counting down and "Price drop!" / "10% Off";
+   PAYMENT METHODS: "₹154.00 Pay via UPI" + UPI app icons; "+91 phone · Not you?"; Powered by FlexyPe. Auto-scroll moves the
+   page down to the payment card.
+V07-09 Tap UPI → about:blank → "Taking you to the secured checkout experience… Powered by PayGlocal" (same tab on the phone).
+V09-13 PayGlocal mobile page: merchant logo + legal name, "PAYING ₹154.00 INR", UPI: "Choose a UPI app to continue"
+   (PhonePe, GPay, Paytm, BHIM, View more UPI apps), button "Pay ₹154.00 INR via Paytm" (toast "Please select any UPI app"
+   if none), Credit or debit card; then "Processing your payment… You will receive a notification from Paytm" and the
+   browser's "This site is trying to open another application — Allow" (UPI intent).
+V14-24 Paytm app opens with the merchant's UPI ID and ₹154; bank account picker; screen-recording warning (the recording
+   itself). The video ends before the payment finishes.
+NOT IN THE VIDEO: how the address got there. The shopper was already known on this phone (same "test by team" address as
+   the desktop screenshots, "Not you?" next to the number), so the address came from a remembered session, not from typing a
+   number. The new-shopper phone / OTP step, COD, thank-you page and a failed payment are still unseen.
+```
+
 ## Database design
 
 Not started on purpose (rule 3). Collect "notes for the database" in the inventory above; design
