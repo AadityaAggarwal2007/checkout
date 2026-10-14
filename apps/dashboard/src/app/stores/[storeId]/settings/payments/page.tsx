@@ -168,7 +168,17 @@ function GatewayCard({ provider, view, base, onSaved }: { provider: GatewayProvi
                 {f.multiline ? (
                   <textarea className="input h-24 font-mono text-xs" placeholder={placeholder} value={values[f.key] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} />
                 ) : (
-                  <input className="input" type={f.secret ? 'password' : 'text'} autoComplete="off" placeholder={placeholder} value={values[f.key] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} />
+                  <input
+                    className="input"
+                    // Not a password field on purpose: browsers otherwise fill the dashboard login into it.
+                    type="text"
+                    name={`gateway-${provider}-${f.key}`}
+                    autoComplete="off"
+                    spellCheck={false}
+                    data-1p-ignore
+                    data-lpignore="true"
+                    style={f.secret ? ({ WebkitTextSecurity: 'disc' } as React.CSSProperties) : undefined}
+                    placeholder={placeholder} value={values[f.key] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} />
                 )}
               </Field>
             );
