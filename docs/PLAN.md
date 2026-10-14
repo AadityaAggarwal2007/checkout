@@ -234,7 +234,7 @@ Store shown: "Kurtiya Store" (our own kurtiya uses FlexyPe now). Gateway PayGloc
    edit/delete) — list of the customer's saved addresses (FlexyPe network-wide by phone).
 41 ADDRESS cont.: Upselling, Auto Scroll, ADDRESS FORM: Show Additional Address Line (landmark) toggle; Make it Required.
 42 PAYMENTS tab: Banners, Coupons, Coupon UI, Upselling, Additional settings (per step). Preview: "PAYMENT METHODS" card:
-   "₹1,686.20 · Extra 5% off · Pay via UPI" + UPI app icons; "+91 88888 88881 · Not you?" (switch user).
+   "₹1,686.20 · Extra 5% off · Pay via UPI" + UPI app icons; "+91 (phone) · Not you?" (switch user).
 43 PAYMENTS tab top (same banners/coupons/upsell blocks).
 44 PAYMENTS cont.: BILLING & GST: Show Billing & GST Section toggle (off) — business customers enter billing + GSTIN.
    COD CONFIRMATION: Show COD confirmation popup ON (Confirm / Cancel before placing a COD order).
