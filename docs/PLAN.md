@@ -13,6 +13,14 @@ Started 2026-10-14. This file is the memory of the planning. Every new session r
 4. After the screenshots are done the owner says "ho gaya"; then Claude compares the inventory with
    the current code (has / change / new) and asks its questions. Only then the build plan.
 5. The owner writes Hinglish; answer in Hinglish, short and plain.
+6. **Build so that everything is easy to build AND easy to change later** (owner 2026-10-14:
+   "asa build kario jissa tuh sab kuch easily build aur change karla"): one feature per file /
+   module, settings driven by config (no hard-coded texts, colours, rules), a new section or a new
+   gateway added without touching the others.
+7. **It must be fast** ("mujha fast chaia"): the storefront widget loads fast and never slows the
+   Shopify store; the checkout feels instant; the dashboard is quick too.
+8. **Screenshot order** (owner 2026-10-14): (a) FlexyPe merchant DASHBOARD first, (b) then the
+   ADD TO CART / cart drawer setup, (c) then how it looks on the Shopify STOREFRONT.
 
 ## What the owner wants
 
@@ -84,7 +92,17 @@ server syntax + `prisma generate` OK):
 Format per screen: **Area > Screen** — what it does; every field / toggle / option with its
 default; what the shopper sees because of it; notes for the database (kept for the END).
 
-_(empty: waiting for screenshots)_
+### (a) Dashboard
+
+_(waiting for screenshots)_
+
+### (b) Add to cart / cart drawer setup
+
+_(later)_
+
+### (c) On the Shopify storefront
+
+_(later)_
 
 ## Database design
 
