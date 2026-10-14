@@ -22,7 +22,7 @@ Cart drawer + one-page checkout for Shopify stores (multi-store SaaS). Read `CLA
 
 ## Try it in the browser
 
-GitHub Codespaces runs everything with demo data: see `docs/TRY.md`.
+GitHub Codespaces runs everything with demo data: see `docs/TRY.md`. On the VPS (separate from ShipTrack): `docs/VPS.md`.
 
 ## Run locally (no Shopify needed)
 
