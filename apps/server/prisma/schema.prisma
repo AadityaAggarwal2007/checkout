@@ -1,0 +1,851 @@
+// Checkout product database. Designed once from the full FlexyPe research (docs/PLAN.md) and the
+// design (docs/DESIGN.md §6). Conventions:
+// - money columns are Int PAISE (₹1 = 100). Never Float/Decimal for money.
+// - every table holding store data has storeId + an index on it; every query filters by it.
+// - secrets (tokens, gateway keys) are stored ENCRYPTED (AES-256-GCM, see src/lib/crypto.ts).
+// - JSON only for settings blobs read/written whole and validated by zod (packages/shared).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Merchants ─────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  /// Raised on password change / "sign out everywhere": older tokens stop working.
+  tokenVersion  Int       @default(0)
+  isPlatformAdmin Boolean @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships StoreMember[]
+  activity    ActivityLog[]
+}
+
+enum StoreStatus {
+  ONBOARDING
+  ACTIVE
+  PAUSED
+  UNINSTALLED
+}
+
+model Store {
+  id          String      @id @default(cuid())
+  name        String
+  /// Store's public domain (custom domain) e.g. www.kurtiya.shop
+  domain      String?
+  /// xyz.myshopify.com — unique per store
+  shopDomain  String      @unique
+  status      StoreStatus @default(ONBOARDING)
+  /// Public key used by the storefront script (not a secret; rotatable).
+  widgetKey   String      @unique @default(cuid())
+  currency    String      @default("INR")
+  timezone    String      @default("Asia/Kolkata")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  members          StoreMember[]
+  shopify          ShopifyConnection?
+  settings         StoreSettings?
+  drawers          DrawerConfig[]
+  checkoutConfig   CheckoutConfig?
+  coupons          Coupon[]
+  upsellRules      UpsellRule[]
+  rtoSettings      RtoSettings?
+  rtoRules         RtoRule[]
+  shippingZones    ShippingZone[]
+  gatewayAccounts  GatewayAccount[]
+  paymentRoutes    PaymentRoute[]
+  customers        Customer[]
+  otpChallenges    OtpChallenge[]
+  checkoutSessions CheckoutSession[]
+  orders           Order[]
+  transactions     PaymentTransaction[]
+  analyticsEvents  AnalyticsEvent[]
+  usageCharges     UsageCharge[]
+  invoices         Invoice[]
+  integrations     Integration[]
+  apiKeys          ApiKey[]
+  activity         ActivityLog[]
+  outboundLogs     OutboundWebhookLog[]
+  exitSurveys      ExitSurveyResponse[]
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+model StoreMember {
+  id          String     @id @default(cuid())
+  storeId     String
+  userId      String
+  role        MemberRole @default(STAFF)
+  /// Extra permission keys on top of the role (see src/lib/permissions.ts); null = role default.
+  permissions String[]   @default([])
+  createdAt   DateTime   @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  storeId    String
+  name       String
+  /// First 8 chars shown in the dashboard; the key itself is only shown once.
+  prefix     String
+  keyHash    String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  storeId   String
+  userId    String?
+  /// e.g. "coupon.update"
+  action    String
+  /// Human line: "Updated coupon - B1G1"
+  summary   String
+  targetId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, createdAt])
+}
+
+// ───────────────────────────── Shopify ─────────────────────────────
+
+model ShopifyConnection {
+  id             String    @id @default(cuid())
+  storeId        String    @unique
+  /// AES-256-GCM encrypted offline access token.
+  accessTokenEnc String
+  scopes         String
+  installedAt    DateTime  @default(now())
+  uninstalledAt  DateTime?
+  /// Theme app embed switched on (last seen by a storefront ping).
+  embedSeenAt    DateTime?
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model ShopifyWebhookEvent {
+  /// X-Shopify-Webhook-Id — makes processing idempotent.
+  id          String   @id
+  shopDomain  String
+  topic       String
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?
+  error       String?
+
+  @@index([shopDomain, receivedAt])
+}
+
+// ───────────────────────────── Settings ─────────────────────────────
+
+model StoreSettings {
+  id      String @id @default(cuid())
+  storeId String @unique
+
+  codEnabled          Boolean @default(true)
+  /// Extra fee for full COD, paise.
+  codFee              Int     @default(0)
+  partialCodEnabled   Boolean @default(false)
+  /// 'fixed' | 'percent'
+  partialCodType      String  @default("fixed")
+  /// paise when fixed, basis points (1% = 100) when percent
+  partialCodValue     Int     @default(0)
+  partialCodMin       Int?
+  partialCodMax       Int?
+  codConfirmPopup     Boolean @default(true)
+
+  /// 'session' | 'customer' — upsell countdown scope
+  upsellTimerScope    String  @default("session")
+  /// Billing: our fee per successful order, basis points (1% = 100).
+  billingRateBps      Int     @default(100)
+  /// Brand shown as "Powered by …" (decided later; never hard-coded).
+  poweredByText       String?
+  updatedAt           DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model DrawerConfig {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String   @default("Default")
+  isActive  Boolean  @default(false)
+  /// All drawer sections (announcements, rewardBar, upsells, addons, notes, confirmation,
+  /// discountCodes, trustBadges, freeGifts, settings, colors) — zod: DrawerSettings.
+  config    Json
+  /// Bumped on each save so storefront caches refresh.
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model CheckoutConfig {
+  id        String   @id @default(cuid())
+  storeId   String   @unique
+  /// General / Login / Address / Payments tabs — zod: CheckoutSettings.
+  config    Json
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────────── Rules ─────────────────────────────
+
+enum CouponKind {
+  AMOUNT_OFF
+  BUY_X_GET_Y
+  FREE_GIFT
+  FREE_SHIPPING
+  BUNDLE
+  PURCHASE_DRIVEN
+  PAYMENT_OFFER
+}
+
+model Coupon {
+  id         String     @id @default(cuid())
+  storeId    String
+  kind       CouponKind
+  /// Upper-case; null for automatic-only coupons.
+  code       String?
+  automatic  Boolean    @default(false)
+  active     Boolean    @default(true)
+  /// Shown in the coupon list to shoppers.
+  visible    Boolean    @default(true)
+  priority   Int        @default(0)
+  title      String?
+  details    String[]   @default([])
+  /// Full rule (setup + condition + eligibility + limits) — zod per kind, maps to packages/core Coupon.
+  rule       Json
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  deletedAt  DateTime?
+
+  store       Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  redemptions CouponRedemption[]
+
+  @@unique([storeId, code])
+  @@index([storeId, active])
+}
+
+model CouponRedemption {
+  id           String   @id @default(cuid())
+  couponId     String
+  storeId      String
+  orderId      String
+  customerId   String?
+  /// Discount this coupon gave on the order, paise.
+  amount       Int
+  createdAt    DateTime @default(now())
+
+  coupon   Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([couponId, orderId])
+  @@index([storeId, couponId])
+  @@index([couponId, customerId])
+}
+
+model UpsellRule {
+  id           String   @id @default(cuid())
+  storeId      String
+  name         String
+  active       Boolean  @default(true)
+  priority     Int      @default(0)
+  /// WHEN (any / products / collections) -> SHOW (products / collection), audience, discount, timer.
+  rule         Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, active])
+}
+
+model RtoSettings {
+  id      String @id @default(cuid())
+  storeId String @unique
+  /// 'all' (strictest wins) | 'single' (highest priority only)
+  mode    String @default("all")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model RtoRule {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String
+  active    Boolean  @default(true)
+  priority  Int      @default(0)
+  /// packages/core RtoCondition
+  condition Json
+  blockCod        Boolean @default(true)
+  blockPartialCod Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, active])
+}
+
+// ───────────────────────────── Shipping ─────────────────────────────
+
+model ShippingZone {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String
+  /// Empty = every state not in another zone.
+  states    String[] @default([])
+  createdAt DateTime @default(now())
+
+  store Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  rates ShippingRate[]
+
+  @@index([storeId])
+}
+
+enum RateBasis {
+  PRICE
+  WEIGHT
+}
+
+model ShippingRate {
+  id      String    @id @default(cuid())
+  zoneId  String
+  name    String
+  eta     String?
+  basis   RateBasis @default(PRICE)
+  active  Boolean   @default(true)
+  sort    Int       @default(0)
+
+  zone            ShippingZone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  slabs           ShippingSlab[]
+  blockedPincodes BlockedPincode[]
+}
+
+model ShippingSlab {
+  id         String  @id @default(cuid())
+  rateId     String
+  /// paise (PRICE) or grams (WEIGHT), inclusive
+  min        Int
+  /// exclusive; null = no upper limit
+  max        Int?
+  charge     Int
+  codAllowed Boolean @default(true)
+
+  rate ShippingRate @relation(fields: [rateId], references: [id], onDelete: Cascade)
+
+  @@index([rateId])
+}
+
+model BlockedPincode {
+  id      String @id @default(cuid())
+  rateId  String
+  pincode String
+
+  rate ShippingRate @relation(fields: [rateId], references: [id], onDelete: Cascade)
+
+  @@unique([rateId, pincode])
+}
+
+// ───────────────────────────── Payments ─────────────────────────────
+
+enum GatewayProvider {
+  PAYGLOCAL
+  PAYU
+}
+
+model GatewayAccount {
+  id               String          @id @default(cuid())
+  storeId          String
+  provider         GatewayProvider
+  /// 'test' | 'live'
+  mode             String          @default("test")
+  active           Boolean         @default(false)
+  /// Encrypted JSON of the provider's credentials (write-only in the dashboard).
+  credentialsEnc   String
+  /// Non-secret part shown back (merchant id, key ids).
+  publicInfo       Json?
+  webhookConfirmed Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  store        Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  routes       PaymentRoute[]
+  transactions PaymentTransaction[]
+
+  @@unique([storeId, provider])
+}
+
+/// Which gateway handles which method (Settings > Payments routing table).
+model PaymentRoute {
+  id               String @id @default(cuid())
+  storeId          String
+  /// packages/core PaymentMethod: upi | card | netbanking | wallet | emi | pay_later
+  method           String
+  gatewayAccountId String
+
+  store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  gateway GatewayAccount @relation(fields: [gatewayAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, method])
+}
+
+enum TxnKind {
+  PAYMENT
+  REFUND
+}
+
+enum TxnStatus {
+  CREATED
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model PaymentTransaction {
+  id               String    @id @default(cuid())
+  storeId          String
+  sessionId        String
+  orderId          String?
+  gatewayAccountId String?
+  provider         String
+  kind             TxnKind   @default(PAYMENT)
+  status           TxnStatus @default(CREATED)
+  amount           Int
+  method           String?
+  /// Our reference sent to the gateway (unique).
+  merchantRef      String    @unique
+  /// Gateway's id (gid / mihpayid).
+  gatewayRef       String?
+  /// Last raw status response, secrets stripped.
+  raw              Json?
+  verifiedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  store   Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  session CheckoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  order   Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  gateway GatewayAccount? @relation(fields: [gatewayAccountId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, createdAt])
+  @@index([sessionId])
+  @@index([provider, gatewayRef])
+}
+
+/// Every callback / webhook a gateway sent, kept for audit and idempotency.
+model GatewayEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  /// sha256 of the raw body — the same delivery is processed once.
+  bodyHash   String   @unique
+  merchantRef String?
+  receivedAt DateTime @default(now())
+  processed  Boolean  @default(false)
+  error      String?
+
+  @@index([merchantRef])
+}
+
+// ───────────────────────────── Shoppers ─────────────────────────────
+
+model Customer {
+  id            String    @id @default(cuid())
+  storeId       String
+  /// E.164 (+91XXXXXXXXXX). Set only after OTP.
+  phone         String
+  name          String?
+  email         String?
+  marketingOptIn Boolean  @default(false)
+  orderCount    Int       @default(0)
+  codOrderCount Int       @default(0)
+  returnedCount Int       @default(0)
+  lifetimeSpend Int       @default(0)
+  lastOrderAt   DateTime?
+  segments      String[]  @default([])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  store       Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  addresses   CustomerAddress[]
+  devices     CustomerDevice[]
+  orders      Order[]
+  sessions    CheckoutSession[]
+  redemptions CouponRedemption[]
+
+  @@unique([storeId, phone])
+}
+
+model CustomerAddress {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  phone      String
+  email      String?
+  line1      String
+  line2      String?
+  landmark   String?
+  city       String
+  state      String
+  pincode    String
+  country    String   @default("IN")
+  /// HOME | WORK | OTHER
+  tag        String   @default("HOME")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+/// A browser that passed OTP for this store ("remember me"). Token kept hashed.
+model CustomerDevice {
+  id         String    @id @default(cuid())
+  customerId String
+  tokenHash  String    @unique
+  userAgent  String?
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+enum OtpStatus {
+  SENT
+  VERIFIED
+  FAILED
+  EXPIRED
+}
+
+model OtpChallenge {
+  id        String    @id @default(cuid())
+  storeId   String
+  /// sha256(phone + pepper) — we never need the number back from here.
+  phoneHash String
+  codeHash  String
+  channel   String    @default("whatsapp")
+  status    OtpStatus @default(SENT)
+  attempts  Int       @default(0)
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, phoneHash, createdAt])
+  @@index([ip, createdAt])
+}
+
+// ───────────────────────────── Checkout ─────────────────────────────
+
+enum SessionStep {
+  CART
+  LOGIN
+  ADDRESS
+  PAYMENT
+  PROCESSING
+  COMPLETED
+}
+
+enum SessionStatus {
+  OPEN
+  PAYING
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+model CheckoutSession {
+  id           String        @id @default(cuid())
+  storeId      String
+  customerId   String?
+  status       SessionStatus @default(OPEN)
+  /// Furthest step reached (for abandoned checkouts and the funnel).
+  step         SessionStep   @default(CART)
+  /// Cart as re-read from Shopify (packages/core Cart).
+  cart         Json
+  /// Codes typed + automatic coupons removed.
+  couponState  Json?
+  /// Chosen address snapshot.
+  address      Json?
+  contactPhone String?
+  contactEmail String?
+  contactName  String?
+  shippingRateId String?
+  paymentMethod  String?
+  /// Last PricingResult (display/audit). Recomputed on the server before payment.
+  pricing      Json?
+  total        Int           @default(0)
+  /// utm_*, fbclid, landing page, referrer, device.
+  attribution  Json?
+  note         String?
+  /// Buy it now (single variant) vs cart.
+  source       String        @default("cart")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  completedAt  DateTime?
+
+  store        Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer     Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order        Order?
+  transactions PaymentTransaction[]
+  events       AnalyticsEvent[]
+
+  @@index([storeId, createdAt])
+  @@index([storeId, status, step])
+}
+
+enum PaymentMode {
+  PREPAID
+  COD
+  PARTIAL_COD
+}
+
+enum OrderPaymentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  COD_CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id              String             @id @default(cuid())
+  storeId         String
+  /// One checkout session -> at most one order (rule 3).
+  sessionId       String             @unique
+  customerId      String?
+  /// Shopify ids once created there.
+  shopifyOrderId  String?
+  shopifyName     String?
+  paymentMode     PaymentMode
+  paymentStatus   OrderPaymentStatus @default(PENDING)
+  paymentMethod   String?
+  fulfillmentStatus String?
+  financialStatus   String?
+  cancelledAt     DateTime?
+
+  contactName     String?
+  contactPhone    String
+  contactEmail    String?
+  shippingAddress Json
+  billingAddress  Json?
+  gstin           String?
+  note            String?
+
+  subtotal        Int
+  discount        Int                @default(0)
+  shipping        Int                @default(0)
+  codFee          Int                @default(0)
+  total           Int
+  paidAmount      Int                @default(0)
+  dueOnDelivery   Int                @default(0)
+  couponCodes     String[]           @default([])
+  /// Full PricingResult at payment time (audit).
+  pricing         Json
+  attribution     Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  store        Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  session      CheckoutSession      @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  customer     Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lines        OrderLine[]
+  transactions PaymentTransaction[]
+  redemptions  CouponRedemption[]
+  usageCharge  UsageCharge?
+
+  @@unique([storeId, shopifyOrderId])
+  @@index([storeId, createdAt])
+  @@index([storeId, paymentStatus])
+  @@index([storeId, contactPhone])
+}
+
+model OrderLine {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  variantId    String
+  title        String
+  variantTitle String?
+  image        String?
+  sku          String?
+  quantity     Int
+  unitPrice    Int
+  compareAtPrice Int?
+  discount     Int     @default(0)
+  total        Int
+  isGift       Boolean @default(false)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// ───────────────────────────── Analytics ─────────────────────────────
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  storeId   String
+  sessionId String?
+  /// anonymous browser id (first-party, per store)
+  visitorId String?
+  /// drawer_open | checkout_start | login | address | payment | processing | order | exit | ...
+  type      String
+  props     Json?
+  createdAt DateTime @default(now())
+
+  store   Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  session CheckoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, type, createdAt])
+  @@index([sessionId])
+}
+
+model ExitSurveyResponse {
+  id        String   @id @default(cuid())
+  storeId   String
+  sessionId String?
+  reason    String
+  comment   String?
+  createdAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+}
+
+// ───────────────────────────── Billing ─────────────────────────────
+
+enum UsageStatus {
+  PENDING
+  INVOICED
+  WAIVED
+  REVERSED
+}
+
+/// Our 1% per successful order (owner 2026-10-14). One row per order.
+model UsageCharge {
+  id         String      @id @default(cuid())
+  storeId    String
+  orderId    String      @unique
+  orderTotal Int
+  rateBps    Int
+  amount     Int
+  status     UsageStatus @default(PENDING)
+  invoiceId  String?
+  createdAt  DateTime    @default(now())
+
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, status])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  storeId     String
+  number      String        @unique
+  periodStart DateTime
+  periodEnd   DateTime
+  amount      Int
+  tax         Int           @default(0)
+  status      InvoiceStatus @default(DRAFT)
+  issuedAt    DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+
+  store   Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  charges UsageCharge[]
+
+  @@index([storeId, periodStart])
+}
+
+// ───────────────────────────── Integrations ─────────────────────────────
+
+model Integration {
+  id        String   @id @default(cuid())
+  storeId   String
+  /// META_PIXEL (v1); later GA4, WHATSAPP_ABANDONED, ...
+  kind      String
+  enabled   Boolean  @default(false)
+  /// Public part (pixel id).
+  config    Json?
+  /// Secret part (conversions API token), encrypted.
+  secretEnc String?
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, kind])
+}
+
+model OutboundWebhookLog {
+  id          String   @id @default(cuid())
+  storeId     String
+  destination String
+  event       String
+  version     String   @default("1")
+  status      Int?
+  attempts    Int      @default(0)
+  error       String?
+  createdAt   DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+}

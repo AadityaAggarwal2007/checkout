@@ -33,6 +33,12 @@ Started 2026-10-14. This file is the memory of the planning. Every new session r
 - Right now the checkout is **not live anywhere** (owner: "abhi band hai"), so there is no live
   customer to protect while it is rebuilt.
 
+## Build progress
+
+- 2026-10-14 Phase 0 started: `docs/DESIGN.md`, `packages/core` (pricing engine, 33 tests), full Prisma schema
+  (36 tables, first migration), `apps/server` (env, encryption keyring, merchant login, store access, Shopify OAuth
+  with state + HMAC, webhooks incl. privacy topics; 20 tests on a real PostgreSQL), CI workflow.
+
 ## What exists today (code on `main`, last commit 513997c, 2026-08-22)
 
 Three parts, all build fine (checked 2026-10-09: widget build OK, dashboard `tsc` 0 errors,
