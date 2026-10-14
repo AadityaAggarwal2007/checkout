@@ -105,7 +105,8 @@ export class App {
   set(state: CheckoutState): void {
     const before = this.state?.step;
     this.state = state;
-    if (state.step === 'done' && before !== 'done') toStore({ type: 'ck:done' });
+    // The store page empties the cart and reports the purchase to the merchant's pixel (no personal data).
+    if (state.step === 'done' && before !== 'done') toStore({ type: 'ck:done', order: state.order ? { number: state.order.number, total: state.order.total } : undefined });
     this.syncPolling();
     this.render();
   }

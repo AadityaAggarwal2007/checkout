@@ -1,6 +1,7 @@
 import { serverApi } from './api.js';
 import { CheckoutFrame } from './checkout-frame.js';
 import { Drawer } from './drawer.js';
+import { initPixel, pixel, purchase } from './pixel.js';
 import { startPreview } from './preview.js';
 import { cartApi, nativeFetch, setNativeFetch } from './shopify-cart.js';
 
@@ -42,6 +43,7 @@ declare global {
     } catch {
       return; // our server is down: the theme's own cart keeps working
     }
+    initPixel(config.metaPixelId);
     const countClass = (window as { __ckCartCountClass?: string }).__ckCartCountClass || config.drawer.settings.cartCountClass;
     let frame: CheckoutFrame | undefined;
     const drawer: Drawer = new Drawer({
@@ -60,7 +62,10 @@ declare global {
       afterReturn(frame, () => void drawer.refresh().catch(() => undefined));
     }
     window.CheckoutDrawer = { open: () => drawer.open(), close: () => drawer.close(), refresh: () => drawer.refresh() };
-    const openAfterAdd = () => (config.drawer.settings.openOnAdd ? drawer.open() : void drawer.refresh());
+    const openAfterAdd = () => {
+      pixel('AddToCart', { content_type: 'product' });
+      return config.drawer.settings.openOnAdd ? drawer.open() : void drawer.refresh();
+    };
     captureForms(openAfterAdd);
     wrapFetch(openAfterAdd, () => void drawer.refresh().catch(() => undefined));
     wrapXhr(openAfterAdd);
@@ -113,7 +118,9 @@ function captureCheckoutButtons(frame: CheckoutFrame, codes: () => string[]): vo
 /** Back on the store after paying on a phone: #ck_done = order placed (empty the cart), #ck_resume = try again. */
 function afterReturn(frame: CheckoutFrame, refresh: () => void): void {
   const hash = location.hash;
-  if (hash === '#ck_done') {
+  if (hash === '#ck_done' || hash.startsWith('#ck_done=')) {
+    const [number, total] = decodeURIComponent(hash.slice('#ck_done='.length)).split('.');
+    purchase({ number, total: Number(total) });
     void cartApi.clear().catch(() => undefined).then(refresh);
   } else if (hash.startsWith('#ck_resume=')) {
     frame.resume(decodeURIComponent(hash.slice('#ck_resume='.length)));

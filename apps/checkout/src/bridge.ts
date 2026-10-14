@@ -5,7 +5,7 @@
  */
 export const inFrame = window.parent !== window;
 
-export function toStore(message: { type: 'ck:close' } | { type: 'ck:done' } | { type: 'ck:navigate'; url: string } | { type: 'ck:ready' }): void {
+export function toStore(message: { type: 'ck:close' } | { type: 'ck:done'; order?: { number: string; total: number } } | { type: 'ck:navigate'; url: string } | { type: 'ck:ready' }): void {
   if (inFrame) window.parent.postMessage(message, '*');
 }
 

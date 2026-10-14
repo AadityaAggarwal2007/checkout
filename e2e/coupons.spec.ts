@@ -3,12 +3,21 @@ import { expect, test, type Page } from '@playwright/test';
 const DASH = 'http://localhost:5103';
 const STORE = 'http://localhost:5104';
 
+/** Logs in once per test run and reuses the cookie (the login route allows 10 tries per 15 minutes). */
+let cookies: Awaited<ReturnType<ReturnType<Page['context']>['cookies']>> | null = null;
 async function login(page: Page) {
+  if (cookies) {
+    await page.context().addCookies(cookies);
+    await page.goto(`${DASH}/stores`);
+    await page.waitForURL(/\/stores\/[^/]+$/);
+    return;
+  }
   await page.goto(`${DASH}/login`);
   await page.fill('input[type=email]', 'owner@local.test');
   await page.fill('input[type=password]', 'local-password');
   await page.click('button:has-text("Log in")');
   await page.waitForURL(/\/stores\/[^/]+$/);
+  cookies = await page.context().cookies();
 }
 
 test('merchant creates a coupon in the wizard and the shopper uses it in the cart', async ({ page }) => {
@@ -103,4 +112,41 @@ test('merchant designs the checkout: live preview, then the real checkout shows 
   await f.locator('[data-test=exit-reason]').first().click();
   await f.locator('[data-test=exit-leave]').click();
   await expect(page.locator('#ck-checkout')).toHaveCount(0);
+});
+
+test('Meta Pixel: switched on in Settings, the store page sends AddToCart to it', async ({ page }) => {
+  await login(page);
+  await page.click('a:has-text("Settings")');
+  await page.click('a:has-text("Integrations")');
+  await page.getByPlaceholder('123456789012345').fill('123456789012345');
+  await page.click('[data-test=save-pixel]');
+  await page.getByRole('switch', { name: 'Meta Pixel on' }).click();
+  await expect(page.getByText('Meta Pixel on', { exact: true })).toBeVisible();
+
+  await page.route('https://connect.facebook.net/**', (r) => r.abort()); // no calls to Meta from tests
+  await page.goto(`${STORE}/products/cotton-straight-kurti`);
+  await page.waitForFunction(() => 'CheckoutDrawer' in window);
+  await page.click('button[name=add]');
+  await expect
+    .poll(() => page.evaluate(() => ((window as unknown as { fbq?: { queue?: unknown[][] } }).fbq?.queue ?? []).map((c) => `${c[0]}:${c[2] ?? c[1]}`)))
+    .toEqual(expect.arrayContaining(['init:123456789012345', 'trackSingle:AddToCart']));
+
+  await page.goBack();
+  await page.waitForURL(/\/settings\/integrations/);
+  await page.click('a:has-text("Integrations")');
+  await page.getByRole('switch', { name: 'Meta Pixel on' }).click();
+  await expect(page.getByText('Saved')).toBeVisible();
+});
+
+test('settings: activity log and an API key', async ({ page }) => {
+  await login(page);
+  await page.click('a:has-text("Settings")');
+  await page.click('a:has-text("API keys")');
+  await page.getByPlaceholder('e.g. Shiprocket sync').fill('ERP');
+  await page.click('[data-test=create-key]');
+  const key = await page.locator('[data-test=new-key]').textContent();
+  const res = await page.request.get('http://localhost:5102/api/v1/orders', { headers: { authorization: `Bearer ${key}` } });
+  expect(res.status()).toBe(200);
+  await page.click('a:has-text("Activity log")');
+  await expect(page.locator('[data-test=activity-row]').first()).toContainText('Created API key "ERP"');
 });

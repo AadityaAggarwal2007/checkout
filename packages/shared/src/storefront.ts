@@ -10,6 +10,8 @@ export interface StorefrontConfig {
   visibleCodes: Array<{ code: string; title?: string; details?: string[] }>;
   /** 'shopify' until our checkout is live for the store (Phase 2), then 'popup'. */
   checkout: { mode: 'shopify' } | { mode: 'popup'; url: string };
+  /** Meta Pixel id when the merchant switched the integration on. */
+  metaPixelId?: string;
 }
 
 export const priceRequestSchema = z.object({

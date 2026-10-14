@@ -1,5 +1,6 @@
 import type { ServerApi } from './api.js';
 import { h } from './dom.js';
+import { pixel, purchase } from './pixel.js';
 import { cartApi } from './shopify-cart.js';
 
 /**
@@ -26,6 +27,7 @@ export class CheckoutFrame {
     if (this.opening || lines.length === 0) return;
     this.opening = true;
     this.show(null);
+    pixel('InitiateCheckout', { num_items: lines.reduce((n, l) => n + l.quantity, 0) });
     try {
       const { url } = await this.api.createCheckout({ lines, codes: opts.codes ?? [], note: opts.note || undefined, source: opts.source, attribution: attribution() });
       this.show(url);
@@ -78,7 +80,7 @@ export class CheckoutFrame {
 
   private onMessage(e: MessageEvent): void {
     if (e.origin !== this.origin) return;
-    const msg = e.data as { type?: string; url?: string } | null;
+    const msg = e.data as { type?: string; url?: string; order?: { number?: unknown; total?: unknown } } | null;
     switch (msg?.type) {
       case 'ck:ready':
         this.overlay?.shadowRoot?.querySelector('.wait')?.remove();
@@ -87,6 +89,7 @@ export class CheckoutFrame {
         this.hide();
         break;
       case 'ck:done':
+        purchase(msg.order);
         void cartApi.clear().catch(() => undefined).then(() => this.onDone());
         break;
       case 'ck:navigate':

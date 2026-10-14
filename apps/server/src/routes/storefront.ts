@@ -80,6 +80,8 @@ export function storefrontRoutes(app: FastifyInstance): void {
     const { test } = req.query as { test?: string };
     const settings = await prisma.storeSettings.findUnique({ where: { storeId: store.id } });
     const testing = isTestKey(app.deps.env.HASH_PEPPER, store.id, test);
+    const metaPixel = await prisma.integration.findUnique({ where: { storeId_kind: { storeId: store.id, kind: 'META_PIXEL' } } });
+    const metaPixelId = metaPixel?.enabled ? (metaPixel.config as { pixelId?: string } | null)?.pixelId : undefined;
     const popup = settings?.checkoutEnabled || testing;
     const body: StorefrontConfig = {
       storeName: store.name,
@@ -87,6 +89,7 @@ export function storefrontRoutes(app: FastifyInstance): void {
       drawer: drawerSettingsSchema.parse(drawer?.config ?? {}),
       visibleCodes: coupons.map(shopperCard),
       checkout: popup ? { mode: 'popup', url: app.deps.env.CHECKOUT_URL ?? app.deps.env.PUBLIC_URL } : { mode: 'shopify' },
+      ...(metaPixelId ? { metaPixelId } : {}),
     };
     // Mark the embed as seen (dashboard shows "drawer is live"), at most once a minute.
     void prisma.shopifyConnection

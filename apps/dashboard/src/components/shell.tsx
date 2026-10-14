@@ -16,7 +16,7 @@ const NAV: Array<{ href: string; label: string; icon: string; soon?: string }> =
   { href: '/upsell', label: 'Upsell', icon: '↗' },
   { href: '/shipping', label: 'Shipping', icon: '⛟' },
   { href: '/rto', label: 'RTO suite', icon: '⛨' },
-  { href: '/settings', label: 'Settings · Payments', icon: '⚙' },
+  { href: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
 export function StoreShell({ storeId, children }: { storeId: string; children: ReactNode }) {

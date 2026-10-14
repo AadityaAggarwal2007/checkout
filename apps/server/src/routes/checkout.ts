@@ -304,7 +304,7 @@ export function checkoutRoutes(app: FastifyInstance): void {
         body:
           `<div class="big">✅</div><h1>Thank you! Your order is placed.</h1><p>Keep the order number for any questions about your order.</p>` +
           `<div class="rows">${rows.map(([k, v]) => `<div><span>${esc(k!)}</span><b>${esc(v!)}</b></div>`).join('')}</div>` +
-          `<a class="btn" href="${esc(shop)}/#ck_done">Continue shopping</a><p class="muted">${esc(store.name)}</p>`,
+          `<a class="btn" href="${esc(shop)}/#ck_done=${encodeURIComponent(`${order.number}.${order.total}`)}">Continue shopping</a><p class="muted">${esc(store.name)}</p>`,
         script: notifyOpenerScript(checkoutOrigin, 'ck:paid', shop),
       });
     }
