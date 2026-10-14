@@ -44,6 +44,20 @@ export function sendPage(
     );
 }
 
+/**
+ * Where the gateway form may go. Not only the form's own host: PayU's _payment (secure.payu.in) answers with a
+ * redirect to its payment page on another host (api.payu.in), and Chrome checks every redirect of a form
+ * against form-action. Allowing only the first host left shoppers on "Opening secure payment…" for ever.
+ */
+export function gatewayFormSources(url: string): string {
+  const host = new URL(url).hostname;
+  const labels = host.split('.');
+  // payu.in, payglocal.in: the last two labels (.co.in style names keep three).
+  const keep = labels.length > 2 && ['co', 'net', 'org', 'gov'].includes(labels[labels.length - 2]!) ? 3 : 2;
+  const base = labels.slice(-keep).join('.');
+  return `https://${host} https://${base} https://*.${base}`;
+}
+
 /** Auto-submitting form to the gateway (PayU takes a POST); the button is there if scripts are off. */
 export function gatewayPostPage(reply: FastifyReply, url: string, fields: Record<string, string>): FastifyReply {
   const inputs = Object.entries(fields)
@@ -51,7 +65,7 @@ export function gatewayPostPage(reply: FastifyReply, url: string, fields: Record
     .join('');
   return sendPage(reply, {
     title: 'Opening payment…',
-    formAction: new URL(url).origin,
+    formAction: gatewayFormSources(url),
     body: `<div class="spin"></div><h1>Opening secure payment…</h1><form id="f" method="post" action="${esc(url)}">${inputs}<button class="btn" type="submit">Continue to payment</button></form>`,
     script: `document.getElementById('f').submit()`,
   });

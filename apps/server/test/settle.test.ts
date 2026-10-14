@@ -79,3 +79,12 @@ describe('which gateway takes a method', () => {
     expect(routeTable([dev, payu], [], false).get('card')).toBe(payu);
   });
 });
+
+describe('gateway hand-off page', () => {
+  it('lets the form follow the gateway onto its other hosts (PayU _payment redirects to api.payu.in)', async () => {
+    const { gatewayFormSources } = await import('../src/checkout/pages.js');
+    expect(gatewayFormSources('https://secure.payu.in/_payment')).toBe('https://secure.payu.in https://payu.in https://*.payu.in');
+    expect(gatewayFormSources('https://test.payu.in/_payment')).toContain('https://*.payu.in');
+    expect(gatewayFormSources('https://pay.payglocal.in/x')).toContain('https://*.payglocal.in');
+  });
+});
