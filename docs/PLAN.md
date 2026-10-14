@@ -300,9 +300,22 @@ Store shown: "Kurtiya Store" (our own kurtiya uses FlexyPe now). Gateway PayGloc
 66 SETTINGS > CHANGE PASSWORD: old / new / confirm.
 67 Top-right store menu: store name + login email, Logout. (Store switcher for multiple stores.)
 
-NOT CAPTURED (ask the owner): API Keys page, Billing & Usage page (FlexyPe charges the merchant: "Outstanding payable" card),
-Payment Offer editor, each RTO filter's editor, an order's detail page, an abandoned checkout's detail, Upsell "Timer
-Settings", notifications (bell), Purchase Driven / Free shipping / Bundle coupon editors, integration config screens.
+68 SETTINGS > API KEYS: "Manage API keys for your platform integrations" + "Generate API Key" (empty).
+69 CREATE PAYMENT OFFER — 4 steps SETUP › CONDITION › USER ELIGIBILITY › USAGE LIMITS (no Preview), right summary card.
+   SETUP: "Applies automatically when user selects payment method"; Discount code + Custom discount title (checkbox);
+   value Percentage off / Fixed amount; APPLY TO: All online payment modes / Set for individual payment modes
+   (then a value per mode); % off; Maximum purchase amount cap.
+   DB: payment_offer = coupon of kind 'payment' with per-method values.
+70 RTO SUITE > Filter based on pincode: empty state "No rules found — Create your first pincode rule" + "Add Rule"
+   (each filter holds a LIST of rules; rule form not captured).
+71 Orders list again (same as 03; no order detail page captured).
+72 CREATE PURCHASE DRIVEN DISCOUNT — 6 steps SETUP › USER BEHAVIOUR › CONDITION › USER ELIGIBILITY › USAGE LIMITS › PREVIEW.
+   SETUP: Coupon code / Automatic, code, Percentage / Fixed, value, max cap. Summary: "Purchase Driven · 0% off on total
+   value · Coupon will not be shown to any customer". (User Behaviour step = based on past order patterns; not captured.)
+
+NOT CAPTURED (ask the owner): Billing & Usage page (FlexyPe charges the merchant: "Outstanding payable" card),
+each RTO filter's rule form, an order's detail page, an abandoned checkout's detail, Upsell "Timer
+Settings", notifications (bell), Purchase Driven 'User Behaviour' step, Free shipping / Bundle coupon editors, integration config screens.
 ```
 
 ### (b) Add to cart / cart drawer setup
