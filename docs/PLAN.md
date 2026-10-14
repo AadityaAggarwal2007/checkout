@@ -90,6 +90,14 @@ server syntax + `prisma generate` OK):
    for a typed phone number (today's leak). Saved address can only come from the same shopper's own browser
    (remembered on that device). "One-Click Checkout" across devices waits for OTP.
 
+## Design rules decided while reading FlexyPe (keep when building)
+
+1. **A shipping charge is never shown under a "Free" name** (owner 2026-10-14, from FlexyPe order #2246: the rate was
+   named "Free shipping" but its ₹0-199 slab charged ₹30). The label the shopper sees comes from the AMOUNT, not
+   the rate's name: ₹0 → "Free shipping"; more than ₹0 → "Shipping ₹30" (and, when a free slab exists above, a line
+   "Add ₹x more for free shipping"). The dashboard warns when a rate whose name contains "free" has a slab above ₹0.
+   Same on the order page, the thank-you page and the order emails.
+
 ## Open questions (asked 2026-10-14, not answered yet)
 
 1. First test store before outside merchants (e.g. one of our own)?
