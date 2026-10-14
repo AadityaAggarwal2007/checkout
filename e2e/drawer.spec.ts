@@ -31,6 +31,6 @@ test('drawer works on a phone screen', async ({ browser }) => {
   await page.click('button[name=add]');
   const panel = drawer(page).locator('.ck-panel');
   await expect(panel).toBeVisible();
-  const box = await panel.boundingBox();
-  expect(box?.width).toBe(390);
+  // The bag re-draws while it prices the cart: read the size until it settles.
+  await expect.poll(async () => (await panel.boundingBox())?.width).toBe(390);
 });

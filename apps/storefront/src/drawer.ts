@@ -138,7 +138,7 @@ export class Drawer {
     const s = this.store.state;
     const d = s.config.drawer;
     if (!d.rewardBar.enabled || !d.rewardBar.confetti || !s.cart) return;
-    const current = d.rewardBar.counting === 'value' ? s.priced?.total ?? s.cart.total_price : s.cart.item_count;
+    const current = d.rewardBar.counting === 'value' ? ui.rewardAmount(s) : s.cart.item_count;
     const fresh = d.rewardBar.tiers.filter((t) => current >= t.threshold && !s.celebrated.has(t.id));
     if (fresh.length === 0) return;
     const celebrated = new Set(s.celebrated);

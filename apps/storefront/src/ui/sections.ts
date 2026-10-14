@@ -88,12 +88,20 @@ export function announcements(cfg: DrawerSettings['announcements']): HTMLElement
   return bar;
 }
 
+/**
+ * What the milestones count: the same amount free-gift and other coupons check their "minimum purchase"
+ * against (selling prices before offers), so the bar never says "₹7 away" while the gift is already in.
+ */
+export function rewardAmount(s: State): number {
+  return s.priced?.subtotal ?? s.cart?.total_price ?? 0;
+}
+
 const TIER_ICON: Record<string, string> = { shipping: '🚚', gift: '🎁', discount: '🏷️' };
 
 export function rewardBar(cfg: DrawerSettings['rewardBar'], s: State): HTMLElement | null {
   if (!cfg.enabled || cfg.tiers.length === 0 || !s.cart) return null;
   const value = cfg.counting === 'value';
-  const current = value ? s.priced?.total ?? s.cart.total_price : s.cart.item_count;
+  const current = value ? rewardAmount(s) : s.cart.item_count;
   const sorted = [...cfg.tiers].sort((x, y) => x.threshold - y.threshold);
   const p = rewardProgress(sorted, current);
   const title = p.allReached
