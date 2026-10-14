@@ -251,7 +251,7 @@ server {
     listen 80;
     server_name $DOMAIN;
     client_max_body_size 2m;
-    location ~ ^/(api|storefront|checkout|webhooks|health)(/|\$) {
+    location ~ ^/(api|storefront|checkout|webhooks|shopify|health)(/|\$) {
         proxy_pass http://127.0.0.1:$API_PORT;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;

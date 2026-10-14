@@ -16,6 +16,8 @@ const config = {
       { source: '/api/:path*', destination: `${API}/api/:path*` },
       { source: '/storefront/:path*', destination: `${API}/storefront/:path*` },
       { source: '/checkout/preview', destination: `${API}/checkout/preview` },
+      // Shopify app install + OAuth callback (the app's URLs point at the dashboard domain).
+      { source: '/shopify/:path*', destination: `${API}/shopify/:path*` },
       { source: '/checkout/assets/:path*', destination: `${API}/checkout/assets/:path*` },
     ];
   },
