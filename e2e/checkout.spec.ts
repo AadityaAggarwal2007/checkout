@@ -108,7 +108,6 @@ test('desktop: a coupon change while the QR is open lets the QR go first', async
   await address(f);
   await f.locator('[data-test=show-qr]').click();
   await expect(f.locator('[data-test=upi-inline]')).toBeVisible();
-  await f.locator('[data-test=coupons-toggle]').click();
   await f.locator('[data-test=coupon-input]').fill('NOPE');
   await f.locator('[data-test=coupon-input]').press('Enter');
   await expect(f.locator('[data-test=show-qr]')).toBeVisible(); // back to the blurred QR, no "payment in progress" error
@@ -162,7 +161,7 @@ test('a returning shopper on the same browser skips OTP and the address', async 
   await page.locator('#ck-cart-drawer .ck-cta').click();
   f = page.frameLocator('#ck-checkout iframe');
   await expect(f.locator('[data-test=method-cod]')).toBeVisible();
-  await expect(f.getByText('Deliver to Asha Verma')).toBeVisible();
+  await expect(f.locator('[data-test=delivery]')).toContainText('Asha Verma');
   // "Not you?" forgets this browser.
   await f.locator('[data-test=not-you]').click();
   await expect(f.locator('[data-test=phone]')).toBeVisible();

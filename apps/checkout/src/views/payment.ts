@@ -26,21 +26,9 @@ export function paymentView(app: App): HTMLElement {
     'div',
     { class: 'stack' },
     s.payment.status === 'failed' ? h('div', { class: 'notice error', 'data-test': 'payment-failed' }, s.payment.message ?? 'Payment failed. Please try again.') : null,
-    s.address
-      ? h(
-          'div',
-          { class: 'card deliver' },
-          svg(ICONS.pin),
-          h('div', { class: 'addr-text' }, h('b', {}, `Deliver to ${s.address.name}`), h('span', { class: 'muted' }, addressLine(s.address)), h('span', { class: 'muted' }, formatPhone(s.customer?.phone ?? ''), ' · ', notYou(app))),
-          h('button', {
-            class: 'link',
-            'data-test': 'change-address',
-            onclick: () => void app.edit('address', async () => app.set((await app.api.editAddress()).state)),
-          }, 'Change'),
-        )
-      : null,
-    s.upsell ? upsellView(app, s.upsell) : null,
     couponsView(app),
+    s.address ? deliveryCard(app) : null,
+    s.upsell ? upsellView(app, s.upsell) : null,
     s.unserviceable
       ? h('div', { class: 'notice error' }, 'Sorry, we do not deliver to this pincode yet. Please choose another address.')
       : h(
@@ -138,6 +126,40 @@ function codConfirm(app: App, m: CheckoutMethod): HTMLElement {
   );
 }
 
+const deliveryLabel = (l: string) => (!l || /^shipping$/i.test(l) ? 'Standard delivery' : /delivery/i.test(l) ? l : `${l} delivery`);
+
+/** Delivery details (Shiprocket style): who and where, then the delivery line. */
+function deliveryCard(app: App): HTMLElement {
+  const s = app.state;
+  const a = s.address!;
+  const email = s.email || s.customer?.email;
+  const sum = s.summary;
+  return h(
+    'div',
+    { class: 'card delivery', 'data-test': 'delivery' },
+    h(
+      'div',
+      { class: 'd-head' },
+      h('h2', {}, 'Delivery details'),
+      h('button', { class: 'link', 'data-test': 'change-address', onclick: () => void app.edit('address', async () => app.set((await app.api.editAddress()).state)) }, 'Change'),
+    ),
+    h('div', { class: 'd-name' }, h('b', {}, a.name), a.tag ? h('span', { class: 'tagchip' }, a.tag.charAt(0) + a.tag.slice(1).toLowerCase()) : null),
+    h('div', { class: 'd-addr' }, addressLine(a)),
+    h('div', { class: 'd-contact muted' }, h('span', {}, svg(ICONS.phone), formatPhone(s.customer?.phone ?? '')), email ? h('span', {}, svg(ICONS.mail), email) : null, notYou(app)),
+    h(
+      'div',
+      { class: 'd-ship' },
+      svg(ICONS.truck),
+      h(
+        'div',
+        {},
+        h('div', {}, h('b', {}, deliveryLabel(sum.shippingLabel)), sum.shippingEta ? `: ${sum.shippingEta}` : null),
+        h('div', { class: sum.shipping === 0 ? 'free' : 'muted small' }, sum.shipping === 0 ? 'Free shipping for you' : `Shipping ${money(sum.shipping)}`),
+      ),
+    ),
+  );
+}
+
 function couponsView(app: App): HTMLElement {
   const c = app.state.coupons;
   const apply = (code: string) =>
@@ -148,22 +170,26 @@ function couponsView(app: App): HTMLElement {
       if (rejected) app.ui.notice = { kind: 'error', text: rejected.message };
       else app.ui.couponInput = '';
     });
+  const offers = c.visible.filter((v) => !c.applied.some((a) => a.code === v.code));
   return h(
     'div',
     { class: 'card coupons' },
     h(
-      'button',
+      'form',
       {
-        class: 'coupon-head',
-        'data-test': 'coupons-toggle',
-        onclick: () => {
-          app.ui.couponOpen = !app.ui.couponOpen;
-          app.render();
+        class: 'coupon-form',
+        onsubmit: (e: Event) => {
+          e.preventDefault();
+          if (app.ui.couponInput.trim()) apply(app.ui.couponInput.trim());
         },
       },
-      svg(ICONS.tag),
-      h('span', {}, c.applied.length ? `${c.applied.length} offer${c.applied.length > 1 ? 's' : ''} applied` : 'Apply a coupon'),
-      svg(ICONS.down, `ck-i${app.ui.couponOpen ? ' rot' : ''}`),
+      h(
+        'label',
+        { class: 'coupon-input' },
+        h('span', { class: 'pct' }, '%'),
+        h('input', { placeholder: 'Enter coupon code', value: app.ui.couponInput, 'data-key': 'coupon', 'data-test': 'coupon-input', oninput: (e: Event) => (app.ui.couponInput = (e.target as HTMLInputElement).value.toUpperCase()) }),
+      ),
+      h('button', { class: 'apply', type: 'submit', 'data-test': 'coupon-apply', disabled: app.ui.busy === 'coupon' }, 'Apply'),
     ),
     c.applied.length
       ? h(
@@ -179,26 +205,23 @@ function couponsView(app: App): HTMLElement {
           ),
         )
       : null,
-    app.ui.couponOpen
+    offers.length
       ? h(
-          'div',
-          { class: 'coupon-body' },
-          h(
-            'form',
-            {
-              class: 'coupon-form',
-              onsubmit: (e: Event) => {
-                e.preventDefault();
-                if (app.ui.couponInput.trim()) apply(app.ui.couponInput.trim());
-              },
+          'button',
+          {
+            class: 'unlock',
+            'data-test': 'coupons-toggle',
+            onclick: () => {
+              app.ui.couponOpen = !app.ui.couponOpen;
+              app.render();
             },
-            h('input', { placeholder: 'Enter coupon code', value: app.ui.couponInput, 'data-key': 'coupon', 'data-test': 'coupon-input', oninput: (e: Event) => (app.ui.couponInput = (e.target as HTMLInputElement).value.toUpperCase()) }),
-            h('button', { class: 'btn small', type: 'submit', disabled: app.ui.busy === 'coupon' }, 'Apply'),
-          ),
-          ...c.visible
-            .filter((v) => !c.applied.some((a) => a.code === v.code))
-            .map((v) => h('button', { class: 'offer', onclick: () => apply(v.code) }, h('b', {}, v.code), v.title ? h('span', { class: 'muted' }, v.title) : null, h('span', { class: 'link' }, 'Apply'))),
+          },
+          app.ui.couponOpen ? 'Hide coupons' : 'Unlock coupons',
+          svg(app.ui.couponOpen ? ICONS.down : ICONS.chevron),
         )
+      : null,
+    app.ui.couponOpen && offers.length
+      ? h('div', { class: 'coupon-body' }, ...offers.map((v) => h('button', { class: 'offer', onclick: () => apply(v.code) }, h('b', {}, v.code), v.title ? h('span', { class: 'muted' }, v.title) : null, h('span', { class: 'link' }, 'Apply'))))
       : null,
   );
 }

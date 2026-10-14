@@ -106,7 +106,7 @@ function liveBody(app: App, m: CheckoutMethod, intent: string, expiresAt: number
       app.render(); // shows "expired"
     }
   }, 1000);
-  const waiting = h('div', { class: 'hint' }, h('div', { class: 'spin' }), 'Waiting for your payment · ', h('span', { class: 'timer' }, 'expires in ', left));
+  const waiting = h('div', { class: 'upi-wait' }, h('div', { class: 'hint' }, h('div', { class: 'spin' }), 'Waiting for your payment'), h('span', { class: 'timer' }, 'expires in ', left));
   if (isPhone()) {
     const query = intent.slice('upi://pay?'.length);
     return h(
