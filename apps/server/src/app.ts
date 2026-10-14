@@ -11,6 +11,7 @@ import { drawerRoutes } from './routes/drawers.js';
 import { healthRoutes } from './routes/health.js';
 import { orderRoutes } from './routes/orders.js';
 import { paymentRoutes } from './routes/payments.js';
+import { rtoRoutes } from './routes/rto.js';
 import { shippingRoutes } from './routes/shipping.js';
 import { shopifyRoutes } from './routes/shopify.js';
 import { storeRoutes } from './routes/stores.js';
@@ -81,6 +82,7 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   paymentRoutes(app);
   couponRoutes(app);
   shippingRoutes(app);
+  rtoRoutes(app);
   orderRoutes(app);
   storefrontRoutes(app);
   checkoutRoutes(app);

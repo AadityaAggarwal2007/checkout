@@ -53,3 +53,16 @@ test('merchant adds a UPI-only payment offer from the wizard', async ({ page }) 
   await page.waitForURL(/\/payment-offers$/);
   await expect(page.getByRole('link', { name: 'UPIDEAL' })).toBeVisible();
 });
+
+test('merchant adds an RTO pincode rule and switches it off', async ({ page }) => {
+  await login(page);
+  await page.click('a:has-text("RTO suite")');
+  await page.click('[data-test=add-rto]');
+  await page.getByRole('button', { name: /^Pincodes/ }).click();
+  await page.fill('[data-test=rto-pincodes]', '560001'); // not a pincode the checkout tests use
+  await page.click('[data-test=save-rto]');
+  await expect(page.locator('[data-test=rto-row]')).toContainText('When the pincode is one of 1 listed');
+  // The API tests check that the checkout hides COD for it; here the switch works.
+  await page.getByRole('switch', { name: 'Pincodes on' }).click();
+  await expect(page.getByText('Rule off')).toBeVisible();
+});

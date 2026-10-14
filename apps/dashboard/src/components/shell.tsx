@@ -15,7 +15,7 @@ const NAV: Array<{ href: string; label: string; icon: string; soon?: string }> =
   { href: '/payment-offers', label: 'Payment offers', icon: '₹' },
   { href: '/upsell', label: 'Upsell', icon: '↗', soon: 'Phase 4' },
   { href: '/shipping', label: 'Shipping', icon: '⛟' },
-  { href: '/rto', label: 'RTO suite', icon: '⛨', soon: 'Phase 4' },
+  { href: '/rto', label: 'RTO suite', icon: '⛨' },
   { href: '/settings', label: 'Settings · Payments', icon: '⚙' },
 ];
 
