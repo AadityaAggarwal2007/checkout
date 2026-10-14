@@ -29,7 +29,7 @@ export const checkoutSettingsSchema = z
     /** Order and visibility of payment methods in the list. */
     methodOrder: z
       .array(z.enum(CHECKOUT_METHODS))
-      .default(['upi', 'card', 'netbanking', 'wallet', 'emi', 'pay_later', 'partial_cod', 'cod']),
+      .default(['upi', 'netbanking', 'card', 'wallet', 'emi', 'pay_later', 'partial_cod', 'cod']),
     hiddenMethods: z.array(z.string()).default([]),
     payButtonText: z.string().trim().max(40).default('Pay now'),
     /** Own names for methods in the list ("UPI (fastest)"). */

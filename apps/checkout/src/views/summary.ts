@@ -27,7 +27,16 @@ export function summaryView(app: App): HTMLElement {
         svg(open ? ICONS.down : ICONS.chevron, 'ck-i'),
       ),
     ),
-    open && sum.savings > 0 ? h('div', { class: 'savings' }, `You are saving ${money(sum.savings)} on this order`) : null,
+    s.lines.some((l) => l.gift) ? h('span', { class: 'gift-tag', 'data-test': 'gift-added' }, 'Free gift added') : null,
+    sum.savings > 0
+      ? h(
+          'div',
+          { class: 'offers-line' },
+          s.coupons.applied.length > 1
+            ? `🎉 Multiple offers Applied! You save ${money(sum.savings)}!`
+            : `🎉 ${s.coupons.applied[0]?.code ?? s.coupons.applied[0]?.title ?? 'Offer'} applied! You save ${money(sum.savings)}!`,
+        )
+      : null,
     open
       ? h(
           'div',

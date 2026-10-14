@@ -16,6 +16,7 @@ export interface Actions {
   openCoupons(): void;
   closeSheet(): void;
   applyCode(code: string): void;
+  setCodeDraft(code: string): void;
   removeCode(code: string): void;
   toggleNote(): void;
   setNote(note: string): void;
@@ -28,10 +29,39 @@ export function header(s: State, a: Actions): HTMLElement {
   return h(
     'div',
     { class: 'ck-head' },
-    svg(icon('cart', 22)),
-    h('h2', {}, `Your cart${n ? ` (${n})` : ''}`),
-    h('button', { class: 'ck-x', 'aria-label': 'Close cart', onclick: () => a.close() }, svg(icon('close', 20, 2))),
+    h('div', { class: 'ck-head-row' }, h('button', { class: 'ck-x', 'aria-label': 'Close cart', onclick: () => a.close() }, svg(icon('chevronLeft', 24, 2))), h('h2', {}, `Shopping Bag${n ? ` (${n})` : ''}`)),
+    timer(s),
   );
+}
+
+/** "Hurry! 03Min : 58Sec": counts down from when this tab first opened the bag, then starts again. */
+function timer(s: State): HTMLElement | null {
+  const t = s.config.drawer.timer;
+  if (!t.enabled) return null;
+  const total = t.minutes * 60;
+  const startedAt = timerStart();
+  const min = h('b', {});
+  const sec = h('b', {});
+  const paint = () => {
+    const left = total - (Math.floor((Date.now() - startedAt) / 1000) % total);
+    min.textContent = `${String(Math.floor(left / 60)).padStart(2, '0')}Min`;
+    sec.textContent = `${String(left % 60).padStart(2, '0')}Sec`;
+  };
+  paint();
+  const el = h('div', { class: 'ck-timer', role: 'timer' }, h('span', {}, t.text), min, h('span', {}, ':'), sec);
+  const id = window.setInterval(() => (el.isConnected ? paint() : window.clearInterval(id)), 1000);
+  return el;
+}
+
+function timerStart(): number {
+  try {
+    const saved = Number(sessionStorage.getItem('ck:timer'));
+    if (saved > 0) return saved;
+    sessionStorage.setItem('ck:timer', String(Date.now()));
+  } catch {
+    /* storage blocked: the timer starts with this page */
+  }
+  return (timerStart as { at?: number }).at ??= Date.now();
 }
 
 export function announcements(cfg: DrawerSettings['announcements']): HTMLElement | null {
@@ -58,17 +88,20 @@ export function announcements(cfg: DrawerSettings['announcements']): HTMLElement
   return bar;
 }
 
+const TIER_ICON: Record<string, string> = { shipping: '🚚', gift: '🎁', discount: '🏷️' };
+
 export function rewardBar(cfg: DrawerSettings['rewardBar'], s: State): HTMLElement | null {
   if (!cfg.enabled || cfg.tiers.length === 0 || !s.cart) return null;
-  const current = cfg.counting === 'value' ? s.priced?.total ?? s.cart.total_price : s.cart.item_count;
+  const value = cfg.counting === 'value';
+  const current = value ? s.priced?.total ?? s.cart.total_price : s.cart.item_count;
   const sorted = [...cfg.tiers].sort((x, y) => x.threshold - y.threshold);
   const p = rewardProgress(sorted, current);
   const title = p.allReached
-    ? 'Congrats! You achieved this tier'
-    : cfg.counting === 'value'
-      ? `You're ${money(p.remaining)} away`
-      : `Add ${p.remaining} more item${p.remaining === 1 ? '' : 's'}`;
-  // Milestones sit at even steps; the fill advances segment by segment.
+    ? h('span', {}, 'Congrats! You have unlocked best discounts')
+    : value
+      ? h('span', {}, 'You are ', h('b', {}, money(p.remaining)), ' away to unlock next milestone')
+      : h('span', {}, 'Add ', h('b', {}, `${p.remaining} more item${p.remaining === 1 ? '' : 's'}`), ' to unlock next milestone');
+  // Milestones sit at even steps after the flag; the fill advances segment by segment.
   const n = sorted.length;
   let fill = 100;
   let prev = 0;
@@ -81,16 +114,18 @@ export function rewardBar(cfg: DrawerSettings['rewardBar'], s: State): HTMLEleme
     }
     prev = t;
   }
-  const track = h('div', { class: 'ck-track' }, h('div', { class: 'ck-fill', style: `width:${Math.max(0, Math.min(100, fill))}%` }));
+  const track = h('div', { class: 'ck-track' }, h('span', { class: 'ck-flag' }, '⛳'), h('div', { class: 'ck-fill', style: `width:${Math.max(0, Math.min(100, fill))}%` }));
   sorted.forEach((t, i) => {
     const on = current >= t.threshold;
-    const dot = h(
-      'div',
-      { class: `ck-dot${on ? ' ck-on' : ''}`, style: `left:${((i + 1) / n) * 100}%`, title: t.label },
-      svg(icon(t.kind === 'shipping' ? 'truck' : t.kind === 'discount' ? 'percent' : 'gift', 15)),
-      h('span', { class: 'ck-dot-l' }, t.label),
+    track.appendChild(
+      h(
+        'div',
+        { class: `ck-dot${on ? ' ck-on' : ''}`, style: `left:${((i + 1) / n) * 100}%` },
+        h('span', { class: 'ck-dot-v' }, value ? String(Math.round(t.threshold / 100)) : String(t.threshold)),
+        h('span', { class: 'ck-dot-i', 'aria-hidden': 'true' }, TIER_ICON[t.kind] ?? '🎁'),
+        h('span', { class: 'ck-dot-l' }, t.label),
+      ),
     );
-    track.appendChild(dot);
   });
   return h('div', { class: 'ck-reward' }, h('div', { class: 'ck-reward-t' }, title), track);
 }
@@ -103,12 +138,9 @@ function lineView(item: ShopifyCartItem, priced: PricedCartLine | undefined, s: 
   const wasTotal = st.showCompareAt && unitCompare ? unitCompare * item.quantity : priced && priced.discount > 0 ? subtotal : undefined;
   const allFree = priced ? priced.total === 0 && priced.subtotal > 0 : false;
 
-  const prices = h('div', { class: 'ck-prices' });
+  const prices = h('div', { class: 'ck-prices' }, allFree ? h('span', { class: 'ck-now' }, money(0)) : h('span', { class: 'ck-now' }, money(total)));
   if (wasTotal && wasTotal > total) prices.appendChild(h('span', { class: 'ck-was' }, money(wasTotal)));
-  prices.appendChild(allFree ? h('span', { class: 'ck-free' }, 'Free') : h('span', { class: 'ck-now' }, money(total)));
-  if (!allFree && wasTotal && wasTotal > total && st.showSavings) {
-    prices.appendChild(h('span', { class: 'ck-off' }, `${pct(wasTotal - total, wasTotal)}% Off`));
-  }
+  const off = wasTotal && wasTotal > total && st.showSavings ? pct(wasTotal - total, wasTotal) : 0;
 
   let variantControl: HTMLElement | null = null;
   if (st.showVariantSelector && !item.product_has_only_default_variant) {
@@ -139,7 +171,7 @@ function lineView(item: ShopifyCartItem, priced: PricedCartLine | undefined, s: 
 
   const img = h('div', { class: 'ck-img', role: 'img', 'aria-label': item.product_title });
   if (item.image) img.style.backgroundImage = cssUrl(item.image);
-  img.appendChild(h('span', { class: 'ck-qbadge' }, item.quantity));
+  if (off > 0) img.appendChild(h('span', { class: 'ck-offb' }, `${off}%`, h('br', {}), 'OFF'));
 
   return h(
     'div',
@@ -148,32 +180,48 @@ function lineView(item: ShopifyCartItem, priced: PricedCartLine | undefined, s: 
     h(
       'div',
       { class: 'ck-l-main' },
-      h(
-        'div',
-        { class: 'ck-l-top' },
-        h('div', { class: 'ck-l-title' }, item.product_title),
-        h('button', { class: 'ck-del', 'aria-label': `Remove ${item.product_title}`, onclick: () => a.setQuantity(item.key, 0) }, svg(icon('trash', 17))),
-      ),
-      variantControl,
-      ...props,
+      h('div', { class: 'ck-l-top' }, h('div', { class: 'ck-l-name' }, h('div', { class: 'ck-l-title' }, item.product_title), variantControl, ...props), prices),
       h(
         'div',
         { class: 'ck-l-bottom' },
-        prices,
+        h('button', { class: 'ck-del', 'aria-label': `Remove ${item.product_title}`, onclick: () => a.setQuantity(item.key, 0) }, svg(icon('trash', 16))),
         h(
           'div',
           { class: 'ck-step' },
-          h('button', { 'aria-label': 'Decrease', onclick: () => a.setQuantity(item.key, item.quantity - 1) }, svg(icon('minus', 15, 2))),
+          h('button', { 'aria-label': 'Decrease', onclick: () => a.setQuantity(item.key, item.quantity - 1) }, svg(icon('minus', 14, 2))),
           h('span', { 'aria-live': 'polite' }, item.quantity),
-          h('button', { 'aria-label': 'Increase', onclick: () => a.setQuantity(item.key, item.quantity + 1) }, svg(icon('plus', 15, 2))),
+          h('button', { 'aria-label': 'Increase', onclick: () => a.setQuantity(item.key, item.quantity + 1) }, svg(icon('plus', 14, 2))),
         ),
       ),
     ),
   );
 }
 
+/** The bag: free gifts first (gold card), then each item as its own card; offer groups keep their label. */
 export function orderSummary(s: State, a: Actions): HTMLElement {
-  const card = h('div', { class: `ck-card${s.busy ? ' ck-busy' : ''}` }, h('div', { class: 'ck-card-h' }, svg(icon('box', 18)), 'Order Summary'));
+  const list = h('div', { class: 'ck-items' });
+  for (const g of s.priced?.gifts ?? []) {
+    const img = h('div', { class: 'ck-img' });
+    if (g.image) img.style.backgroundImage = cssUrl(g.image);
+    list.appendChild(
+      h(
+        'div',
+        { class: 'ck-line ck-gift' },
+        img,
+        h(
+          'div',
+          { class: 'ck-l-main' },
+          h(
+            'div',
+            { class: 'ck-l-top' },
+            h('div', { class: 'ck-l-name' }, h('div', { class: 'ck-l-title' }, g.title), h('span', { class: 'ck-chip' }, '🎁 Free Gift')),
+            h('div', { class: 'ck-prices' }, h('span', { class: 'ck-now' }, money(0)), h('span', { class: 'ck-was' }, money(g.unitPrice * g.quantity))),
+          ),
+        ),
+        h('span', { class: 'ck-bow', 'aria-hidden': 'true' }, '🎀'),
+      ),
+    );
+  }
   const pricedByKey = new Map((s.priced?.lines ?? []).map((l) => [l.lineId, l]));
   const groups = s.priced?.groups ?? {};
   const shownGroups = new Map<string, HTMLElement>();
@@ -182,46 +230,38 @@ export function orderSummary(s: State, a: Actions): HTMLElement {
     const view = lineView(item, priced, s, a);
     const gid = priced?.groupIds.find((g) => groups[g]);
     if (!gid) {
-      card.appendChild(view);
+      list.appendChild(view);
       continue;
     }
     let box = shownGroups.get(groups[gid]!);
     if (!box) {
       box = h('div', { class: 'ck-group' }, h('div', { class: 'ck-group-h' }, svg(icon('checkCircle', 15)), groups[gid]!));
       shownGroups.set(groups[gid]!, box);
-      card.appendChild(box);
+      list.appendChild(box);
     }
     box.appendChild(view);
   }
-  for (const g of s.priced?.gifts ?? []) {
-    const img = h('div', { class: 'ck-img' });
-    if (g.image) img.style.backgroundImage = cssUrl(g.image);
-    img.appendChild(h('span', { class: 'ck-qbadge' }, g.quantity));
-    card.appendChild(
-      h(
-        'div',
-        { class: 'ck-line' },
-        img,
-        h(
-          'div',
-          { class: 'ck-l-main' },
-          h('div', { class: 'ck-l-top' }, h('div', { class: 'ck-l-title' }, g.title), h('span', { class: 'ck-chip' }, svg(icon('gift', 12)), 'Free Gift')),
-          h('div', { class: 'ck-prices' }, h('span', { class: 'ck-was' }, money(g.unitPrice * g.quantity)), h('span', { class: 'ck-free' }, 'Free')),
-        ),
-      ),
-    );
-  }
-  return card;
+  return list;
 }
 
+/** "Enter coupon code" + Apply right in the bag; the store's listed coupons open in a sheet. */
 export function coupons(s: State, a: Actions): HTMLElement | null {
-  if (!s.config.drawer.discountCodes.enabled) return null;
-  const saved = s.priced?.savings ?? 0;
+  const d = s.config.drawer.discountCodes;
+  if (!d.enabled) return null;
+  const input = h('input', { placeholder: d.placeholder, 'aria-label': d.placeholder, autocomplete: 'off', autocapitalize: 'characters', maxlength: 40 }) as HTMLInputElement;
+  input.value = s.codeDraft;
+  input.addEventListener('input', () => a.setCodeDraft(input.value));
+  const submit = () => input.value.trim() && a.applyCode(input.value);
+  input.addEventListener('keydown', (e) => (e as KeyboardEvent).key === 'Enter' && submit());
   return h(
     'div',
     { class: 'ck-coupon' },
-    h('button', { class: 'ck-coupon-btn', onclick: () => a.openCoupons() }, h('span', { class: 'ck-coupon-ic' }, svg(icon('percent', 18, 2.2))), h('b', {}, 'Coupons'), svg(icon('chevronRight', 18))),
-    saved > 0 ? h('div', { class: 'ck-saved' }, `You saved ${money(saved)} on this order 🎉`) : null,
+    h('div', { class: 'ck-code-row' }, input, h('button', { onclick: submit, disabled: s.busy }, d.applyText)),
+    s.codes.length
+      ? h('div', { class: 'ck-codes' }, ...s.codes.map((c) => h('button', { class: 'ck-code ck-on', 'aria-label': `Remove ${c}`, onclick: () => a.removeCode(c) }, svg(icon('check', 13)), c, h('span', { class: 'ck-code-x' }, '×'))))
+      : null,
+    s.codeMessage && !s.sheet ? h('div', { class: `ck-msg ck-${s.codeMessage.kind}` }, s.codeMessage.text) : null,
+    s.config.visibleCodes.length ? h('button', { class: 'ck-coupon-btn', onclick: () => a.openCoupons() }, 'View all coupons', svg(icon('chevronRight', 16))) : null,
   );
 }
 
@@ -246,13 +286,13 @@ export function upsells(cfg: DrawerSettings['upsells'], list: UpsellProduct[], s
             'div',
             { class: 'ck-l-bottom' },
             h('div', { class: 'ck-prices' }, p.compareAtPrice ? h('span', { class: 'ck-was' }, money(p.compareAtPrice)) : null, h('span', { class: 'ck-now' }, money(p.price))),
-            h('button', { class: 'ck-btn-o', disabled: s.busy, onclick: () => a.addUpsell(p.variantId) }, 'Add'),
+            h('button', { class: 'ck-btn-o', disabled: s.busy, onclick: () => a.addUpsell(p.variantId) }, '+ Add'),
           ),
         ),
       ),
     );
   }
-  return h('div', { class: 'ck-card' }, h('div', { class: 'ck-card-h' }, svg(icon('bag', 18)), cfg.title), row);
+  return h('div', { class: 'ck-card ck-upsell' }, h('div', { class: 'ck-ups-h' }, cfg.title), row);
 }
 
 export function notes(cfg: DrawerSettings['notes'], s: State, a: Actions): HTMLElement | null {
@@ -271,9 +311,24 @@ export function notes(cfg: DrawerSettings['notes'], s: State, a: Actions): HTMLE
   return wrap;
 }
 
+/** What the bag would cost without any offer: compare-at prices and the free gifts' prices. */
+export function fullPrice(s: State): number {
+  const priced = new Map((s.priced?.lines ?? []).map((l) => [l.lineId, l]));
+  let was = 0;
+  for (const i of s.cart?.items ?? []) {
+    const p = priced.get(i.key);
+    const unit = Math.max(p?.compareAtPrice ?? 0, p?.unitPrice ?? i.price, i.original_price);
+    was += unit * i.quantity;
+  }
+  for (const g of s.priced?.gifts ?? []) was += g.unitPrice * g.quantity;
+  return was;
+}
+
 export function footer(s: State, a: Actions): HTMLElement {
   const d = s.config.drawer;
   const total = s.priced?.total ?? s.cart?.total_price ?? 0;
+  const was = fullPrice(s);
+  const saving = Math.max(0, was - total);
   const terms = d.confirmation.enabled
     ? (() => {
         const box = h('input', { type: 'checkbox' }) as HTMLInputElement;
@@ -289,16 +344,31 @@ export function footer(s: State, a: Actions): HTMLElement {
   return h(
     'div',
     { class: 'ck-foot' },
-    terms,
+    saving > 0 ? h('div', { class: 'ck-saving' }, '🎉 You\'re saving ', h('b', {}, money(saving)), ' 🎉!') : null,
     h(
       'div',
-      { class: 'ck-pay' },
-      h('div', { class: 'ck-total' }, h('b', {}, money(total)), h('small', {}, 'Estimated total')),
-      h('button', { class: 'ck-cta', disabled: s.busy, onclick: () => a.checkout() }, svg(icon('zap', 18, 2)), d.settings.checkoutText),
+      { class: 'ck-foot-in' },
+      terms,
+      h(
+        'div',
+        { class: 'ck-pay' },
+        h('div', { class: 'ck-total' }, h('small', {}, 'Estimated Total'), h('div', {}, was > total ? h('s', {}, money(was)) : null, h('b', {}, money(total)))),
+        h(
+          'button',
+          { class: 'ck-cta', disabled: s.busy, onclick: () => a.checkout() },
+          d.settings.buttonTag ? h('span', { class: 'ck-cta-tag' }, d.settings.buttonTag) : null,
+          h('span', { class: 'ck-cta-main' }, d.settings.checkoutText, h('span', { class: 'ck-cta-apps' }, ...['gpay', 'phonepe', 'paytm'].map((b) => svg(BADGES[b] ?? '', 'ck-app')))),
+          h('span', { class: 'ck-cta-sub' }, svg(icon('shield', 10)), '100% secure payments'),
+        ),
+      ),
+      badges,
     ),
-    badges,
-    h('div', { class: 'ck-secured' }, svg(icon('shield', 12)), 'Secured checkout'),
   );
+}
+
+/** Three dots while the bag is being updated. */
+export function loader(): HTMLElement {
+  return h('div', { class: 'ck-loader', role: 'status', 'aria-label': 'Updating your bag' }, h('i', {}), h('i', {}), h('i', {}));
 }
 
 export function empty(d: DrawerSettings): HTMLElement {
@@ -313,12 +383,6 @@ export function empty(d: DrawerSettings): HTMLElement {
 }
 
 export function couponSheet(s: State, a: Actions): HTMLElement[] {
-  const d = s.config.drawer.discountCodes;
-  const input = h('input', { placeholder: d.placeholder, 'aria-label': d.placeholder, autocomplete: 'off', autocapitalize: 'characters', maxlength: 40 }) as HTMLInputElement;
-  const submit = () => input.value.trim() && a.applyCode(input.value);
-  input.addEventListener('keydown', (e) => (e as KeyboardEvent).key === 'Enter' && submit());
-  window.setTimeout(() => input.focus(), 50);
-  const codes = h('div', { class: 'ck-codes' });
   const cards = h('div', { class: 'ck-cards' });
   for (const c of s.config.visibleCodes) {
     const on = s.codes.includes(c.code);
@@ -338,18 +402,13 @@ export function couponSheet(s: State, a: Actions): HTMLElement[] {
       ),
     );
   }
-  for (const c of s.codes.filter((x) => !s.config.visibleCodes.some((v) => v.code === x))) {
-    codes.appendChild(h('button', { class: 'ck-code ck-on', onclick: () => a.removeCode(c) }, svg(icon('check', 13)), c));
-  }
   return [
     h('div', { class: 'ck-sheet-bg', onclick: () => a.closeSheet() }),
     h(
       'div',
-      { class: 'ck-sheet', role: 'dialog', 'aria-label': 'Apply discount code' },
+      { class: 'ck-sheet', role: 'dialog', 'aria-label': 'Coupons' },
       h('div', { class: 'ck-grab' }),
-      h('h3', {}, 'Apply Discount Code'),
-      h('div', { class: 'ck-code-row' }, input, h('button', { onclick: submit }, d.applyText)),
-      codes,
+      h('h3', {}, 'Coupons for you'),
       cards,
       s.codeMessage ? h('div', { class: `ck-msg ck-${s.codeMessage.kind}` }, s.codeMessage.text) : null,
     ),

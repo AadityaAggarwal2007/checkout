@@ -50,6 +50,7 @@ export class Drawer {
       upsells: [],
       sheet: null,
       codeMessage: null,
+      codeDraft: '',
       noteOpen: false,
       note: '',
       termsAccepted: false,
@@ -91,8 +92,11 @@ export class Drawer {
         codes,
       );
       if (seq !== this.pricingSeq) return; // a newer cart change won
+      const before = new Set((this.store.state.priced?.gifts ?? []).map((g) => g.variantId));
+      const newGift = !!this.store.state.priced && priced.gifts.some((g) => !before.has(g.variantId));
       this.store.set({ priced });
-      this.celebrate();
+      if (newGift && this.store.state.open) this.rain();
+      else this.celebrate();
     } catch {
       // Server unreachable: keep showing Shopify's own numbers.
       if (seq === this.pricingSeq) this.store.set({ priced: null });
@@ -140,7 +144,13 @@ export class Drawer {
     const celebrated = new Set(s.celebrated);
     fresh.forEach((t) => celebrated.add(t.id));
     s.celebrated = celebrated; // no re-render needed
-    if (s.open) confetti(this.root);
+    if (s.open) this.rain();
+  }
+
+  /** Confetti over the bag only. */
+  private rain(): void {
+    const panel = this.root.querySelector('.ck-panel') as HTMLElement | null;
+    confetti(this.root, panel?.getBoundingClientRect());
   }
 
   readonly actions: ui.Actions = {
@@ -162,21 +172,24 @@ export class Drawer {
     addUpsell: (variantId) => void this.mutate(() => cartApi.add(variantId, 1)),
     openCoupons: () => this.store.set({ sheet: 'coupons', codeMessage: null }),
     closeSheet: () => this.store.set({ sheet: null }),
+    setCodeDraft: (code) => {
+      this.store.state.codeDraft = code; // no re-render while typing
+    },
     applyCode: (raw) => {
       const code = raw.trim().toUpperCase();
       if (!code) return;
       const codes = [...new Set([...this.store.state.codes, code])].slice(-5);
-      this.store.set({ codes, codeMessage: null });
+      this.store.set({ codes, codeMessage: null, busy: true });
       void this.reprice().then(() => {
         const s = this.store.state;
         const rejected = s.priced?.rejected.find((r) => r.code === code);
         if (rejected) {
-          this.store.set({ codes: s.codes.filter((c) => c !== code), codeMessage: { kind: 'err', text: rejected.message } });
+          this.store.set({ busy: false, codes: s.codes.filter((c) => c !== code), codeMessage: { kind: 'err', text: rejected.message } });
           void this.reprice();
         } else {
           codeStorage.write(this.opts.storeKey, s.codes);
-          this.store.set({ codeMessage: { kind: 'ok', text: s.config.drawer.discountCodes.appliedMessage } });
-          if (s.config.drawer.discountCodes.confetti) confetti(this.root);
+          this.store.set({ busy: false, sheet: null, codeDraft: '', codeMessage: { kind: 'ok', text: s.config.drawer.discountCodes.appliedMessage } });
+          if (s.config.drawer.discountCodes.confetti) this.rain();
         }
       });
     },
@@ -232,6 +245,7 @@ export class Drawer {
         ui.notes(d.notes, s, this.actions),
       );
       panel.append(body, ui.footer(s, this.actions));
+      if (s.busy) panel.append(ui.loader());
       if (s.sheet === 'coupons') panel.append(...ui.couponSheet(s, this.actions));
       requestAnimationFrame(() => (body.scrollTop = scroll));
     } else {

@@ -1,4 +1,4 @@
-:root{--primary:#111827;--primary-text:#fff;--accent:#0E9F6E;--bg:#F3F4F6;--card:#fff;--line:#E5E7EB;--muted:#6B7280;--text:#111827;--red:#B91C1C;--radius:12px}
+:root{--primary:#111827;--primary-text:#fff;--accent:#0E9F6E;--bg:color-mix(in srgb,var(--primary) 4%,#FFF8F1);--card:#fff;--line:#E5E7EB;--muted:#6B7280;--text:#111827;--red:#B91C1C;--radius:12px}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
@@ -9,16 +9,17 @@ button,input,select{font:inherit;color:inherit}
 .spin{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:ck-spin .9s linear infinite;margin:6px auto}
 @keyframes ck-spin{to{transform:rotate(360deg)}}
 
-.ck-header{background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px 8px;position:sticky;top:0;z-index:5}
-.ck-brand{display:flex;align-items:center;justify-content:space-between;min-height:36px}
-.ck-brand b{font-size:17px}.ck-logo{max-height:32px;max-width:160px;object-fit:contain}
-.icon-btn{border:0;background:transparent;padding:6px;border-radius:8px;cursor:pointer;display:flex}.icon-btn:hover{background:var(--bg)}
+.ck-header{position:sticky;top:0;z-index:5}
+.ck-brand{position:relative;display:flex;align-items:center;justify-content:center;min-height:56px;padding:8px 48px;color:var(--primary-text);background:linear-gradient(90deg,var(--primary) 0%,color-mix(in srgb,var(--primary) 55%,#fff) 62%,color-mix(in srgb,var(--primary) 8%,#fff) 100%)}
+.ck-brand b{font-size:18px;letter-spacing:.2px}.ck-logo{max-height:40px;max-width:170px;object-fit:contain}
+.icon-btn{border:0;background:transparent;padding:6px;border-radius:8px;cursor:pointer;display:flex;color:inherit}.icon-btn:hover{background:rgba(255,255,255,.15)}
+.icon-btn.back{position:absolute;left:8px;top:50%;transform:translateY(-50%)}
+.ck-header .banner{margin:0;border-radius:0;background:color-mix(in srgb,var(--primary) 82%,#000);color:var(--primary-text);font-size:13px;font-weight:600;padding:6px 12px;text-align:center}
 .ck-i{display:inline-flex;align-items:center;flex-shrink:0}.ck-i.big svg{width:56px;height:56px}
-.ck-steps{list-style:none;margin:8px 0 2px;padding:0;display:flex;gap:6px;font-size:12px;color:var(--muted)}
-.ck-steps li{flex:1;display:flex;align-items:center;gap:6px;padding-top:6px;border-top:3px solid var(--line)}
-.ck-steps li span{width:18px;height:18px;border-radius:50%;background:var(--line);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.ck-steps li.now{color:var(--text);font-weight:600;border-top-color:var(--primary)}.ck-steps li.now span{background:var(--primary);color:var(--primary-text)}
-.ck-steps li.done{border-top-color:var(--accent)}.ck-steps li.done span{background:var(--accent);color:#fff}
+.ring{position:relative;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--primary);background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.ring::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:3px solid transparent;border-top-color:var(--primary);animation:ck-spin .9s linear infinite}
+.ring svg{width:24px;height:24px}
+.ck-loading p{color:var(--text);font-size:14px}
 
 .ck-summary{background:var(--card);border-bottom:1px solid var(--line)}
 .sum-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:0;background:transparent;cursor:pointer;font-size:14px}
@@ -147,3 +148,20 @@ a.btn{text-decoration:none}
 .upi-logo.phonepe .pe{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#5F259F;color:#fff;font-size:18px;font-weight:700}
 .upi-logo.paytm{font-size:14px;font-style:normal;letter-spacing:-.3px}.upi-logo .pt1{color:#002E6E}.upi-logo .pt2{color:#00B9F1}
 .upi-logo .ck-i,.upi-logo svg{display:block}
+.ck-summary{position:relative}
+.gift-tag{position:absolute;top:-9px;right:12px;background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0;border-radius:6px;font-size:11px;font-weight:600;padding:1px 8px}
+.offers-line{padding:0 16px 12px;margin-top:-6px;color:#15803D;font-size:13px;font-weight:500}
+.methods .method.sel,.upi-head.sel{background:linear-gradient(90deg,var(--primary),color-mix(in srgb,var(--primary) 55%,#fff));color:var(--primary-text);border-radius:10px;padding-left:10px;padding-right:10px}
+.method.sel .muted,.method.sel .m-icon,.upi-head.sel .m-icon{color:inherit}.method.sel .m-icon,.upi-head.sel .m-icon{background:rgba(255,255,255,.9);color:var(--primary)}
+.account{padding:0}.acc-head{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;border:0;background:none;cursor:pointer;font-size:16px;text-align:left}.acc-head>span:nth-child(2){flex:1}
+.acc-head .rot svg,.acc-head .ck-i.rot{transform:rotate(180deg)}
+.acc-body{display:flex;justify-content:space-between;align-items:center;padding:0 16px 14px;font-size:14px}
+.hurray .sheet{position:relative;max-width:360px;margin:auto;border-radius:16px;padding:22px 18px 14px}
+.hurray .popper{font-size:64px;line-height:1;margin:-58px 0 8px}
+.hurray h2{font-size:24px;margin:0 0 6px}
+.hurray p{margin:0 0 4px;font-size:15px}.hurray .saved{font-size:19px;font-weight:700;margin:8px 0 10px}
+.hurray .yay{border:0;background:none;font-size:16px;font-weight:700;padding:8px 18px;cursor:pointer}
+.hurray .x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+.hurray{align-items:center;padding:16px}
+.confetti,.ck-confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
+.coupon-input input::placeholder{text-transform:none}

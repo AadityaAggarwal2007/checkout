@@ -45,8 +45,7 @@ test('merchant creates a coupon in the wizard and the shopper uses it in the car
   const drawer = page.locator('#ck-cart-drawer');
   await drawer.locator('.ck-coupon-btn').click();
   await expect(drawer.getByText('Flat 15% off on total value')).toBeVisible();
-  await drawer.locator('.ck-code-row input').fill('FEST15');
-  await drawer.locator('.ck-code-row button').click();
+  await drawer.locator('.ck-cards .ck-card', { hasText: 'FEST15' }).locator('.ck-card-btn').click();
   await expect(drawer.getByText('FEST15 applied!').or(drawer.getByText('FEST15')).first()).toBeVisible();
 });
 

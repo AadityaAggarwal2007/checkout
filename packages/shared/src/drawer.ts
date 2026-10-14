@@ -19,6 +19,16 @@ export const drawerSettingsSchema = z.object({
       buttonText: hex.default('#FFFFFF'),
       background: hex.default('#F7F7F8'),
       accent: hex.default('#0F9D58'),
+      /** Headings ("You may also like"), the timer boxes, gift borders. */
+      highlight: hex.default('#AC6E0D'),
+    })
+    .default({}),
+  /** "Hurry! 03Min : 58Sec" under the title; starts again when it reaches zero. */
+  timer: z
+    .object({
+      enabled: z.boolean().default(false),
+      text: text(20).default('Hurry!'),
+      minutes: z.number().int().min(1).max(60).default(4),
     })
     .default({}),
   announcements: z
@@ -52,7 +62,7 @@ export const drawerSettingsSchema = z.object({
   upsells: z
     .object({
       enabled: z.boolean().default(false),
-      title: text(30).default('Products you may like'),
+      title: text(30).default('You may also like'),
       /** manual = the products below; auto = from the store's upsell rules */
       mode: z.enum(['manual', 'auto']).default('manual'),
       productIds: z.array(z.string().min(1)).max(30).default([]),
@@ -97,7 +107,7 @@ export const drawerSettingsSchema = z.object({
     .object({
       enabled: z.boolean().default(true),
       mode: z.enum(['input', 'list']).default('input'),
-      placeholder: text(30).default('Discount code'),
+      placeholder: text(30).default('Enter coupon code'),
       applyText: text(10).default('Apply'),
       invalidMessage: text(80).default('Invalid discount code'),
       appliedMessage: text(80).default('Discount applied successfully'),
@@ -106,7 +116,7 @@ export const drawerSettingsSchema = z.object({
     .default({}),
   trustBadges: z
     .object({
-      enabled: z.boolean().default(true),
+      enabled: z.boolean().default(false),
       badges: z.array(z.enum(TRUST_BADGES)).max(8).default(['upi', 'gpay', 'mastercard', 'paytm', 'phonepe']),
     })
     .default({}),
@@ -117,7 +127,9 @@ export const drawerSettingsSchema = z.object({
       showVariantSelector: z.boolean().default(true),
       showProperties: z.boolean().default(true),
       openOnAdd: z.boolean().default(true),
-      checkoutText: text(30).default('Checkout'),
+      checkoutText: text(30).default('Buy Now'),
+      /** Small tag on the checkout button ("Limited Offer"); empty = none. */
+      buttonTag: text(20).default(''),
       emptyTitle: text(30).default('Your cart is empty'),
       emptyDescription: text(60).default("Looks like you haven't added anything to your cart yet"),
       emptyButtonText: text(25).default('Continue Shopping'),

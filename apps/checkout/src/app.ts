@@ -1,7 +1,8 @@
 import type { CheckoutMethod, CheckoutState } from '@checkout/shared';
 import { api, ApiError, device, type Api } from './api.js';
 import { close, isPhone, toStore } from './bridge.js';
-import { h } from './dom.js';
+import { h, svg } from './dom.js';
+import { ICONS } from './icons.js';
 import { addressView } from './views/address.js';
 import { headerView, footerView } from './views/layout.js';
 import { loginView } from './views/login.js';
@@ -9,6 +10,8 @@ import { paymentView } from './views/payment.js';
 import { exitView, wantsExitPrompt } from './views/exit.js';
 import { doneView, processingView } from './views/status.js';
 import { summaryView } from './views/summary.js';
+import { confetti } from './confetti.js';
+import { hurrayView, pickOffer } from './views/hurray.js';
 
 /** Page-only state (what the server does not need to know). */
 export interface Ui {
@@ -38,15 +41,15 @@ export interface Ui {
   upiExpiresAt?: number;
   /** Phone: the UPI app tile tapped (its scheme), opened as soon as the gateway gives the payment link. */
   upiApp?: string;
+  /** The method the shopper just picked (its row is highlighted). */
+  picked?: string;
+  /** "Hurray!" popup for an offer that applied. */
+  hurray?: { name: string; saved: number };
+  accountOpen?: boolean;
   busy?: string;
   notice?: { kind: 'error' | 'info'; text: string };
 }
 
-function bannerView(s: CheckoutState): HTMLElement | null {
-  const step = s.step === 'login' || s.step === 'address' || s.step === 'payment' ? s.step : null;
-  const text = step ? s.settings.banners[step] : undefined;
-  return text ? h('div', { class: 'banner', 'data-test': 'banner' }, text) : null;
-}
 
 export class App {
   state!: CheckoutState;
@@ -72,7 +75,7 @@ export class App {
   }
 
   async start(): Promise<void> {
-    this.root.replaceChildren(h('div', { class: 'ck-loading' }, h('div', { class: 'spin' }), h('p', {}, 'Creating your order…')));
+    this.root.replaceChildren(h('div', { class: 'ck-loading' }, h('div', { class: 'ring' }, svg(ICONS.lock)), h('p', {}, 'Initiating Checkout')));
     try {
       const { state } = await this.api.session();
       this.set(state);
@@ -109,11 +112,36 @@ export class App {
   set(state: CheckoutState): void {
     const before = this.state?.step;
     this.state = state;
+    this.offerHurray(state);
     // The store page empties the cart and reports the purchase to the merchant's pixel (no personal data).
     if (state.step === 'done' && before !== 'done') toStore({ type: 'ck:done', order: state.order ? { number: state.order.number, total: state.order.total } : undefined });
     this.syncPolling();
     this.render();
   }
+
+  /** Once per checkout: the best offer that applied, as a "Hurray!" popup with confetti. */
+  offerHurray(state: CheckoutState, code?: string): void {
+    if (this.preview || (state.step !== 'payment' && !code)) return;
+    const key = `ck:hurray:${state.id}`;
+    try {
+      if (!code && sessionStorage.getItem(key)) return;
+    } catch {
+      /* storage blocked: shown once per page load */
+    }
+    if (!code && this.hurrayShown) return;
+    const best = pickOffer(state, code);
+    if (!best) return;
+    this.hurrayShown = true;
+    try {
+      sessionStorage.setItem(key, '1');
+    } catch {
+      /* ignore */
+    }
+    this.ui.hurray = best;
+    window.setTimeout(() => confetti(document.body), 60);
+  }
+
+  private hurrayShown = false;
 
   async refresh(): Promise<void> {
     try {
@@ -138,6 +166,7 @@ export class App {
   async pay(m: CheckoutMethod, upiApp?: string): Promise<void> {
     const phone = isPhone();
     this.ui.upiApp = upiApp;
+    this.ui.picked = m.method;
     // UPI on a gateway that can show its QR here: no tab; if the gateway then declines, the store page navigates.
     const inline = m.method === 'upi' && !!this.state.inlineUpi;
     // Desktop: open the tab inside the click (popup blockers), point it at the gateway when ready.
@@ -278,7 +307,8 @@ export class App {
         { class: 'ck-page' },
         headerView(this),
         this.ui.notice ? h('div', { class: `notice ${this.ui.notice.kind}`, role: 'alert' }, this.ui.notice.text) : null,
-        h('main', { class: 'ck-main' }, bannerView(s), s.step === 'done' ? null : summaryView(this), body),
+        h('main', { class: 'ck-main' }, s.step === 'done' ? null : summaryView(this), body),
+        this.ui.hurray ? hurrayView(this, this.ui.hurray) : null,
         footerView(this),
         this.ui.exitOpen ? exitView(this) : null,
       ),

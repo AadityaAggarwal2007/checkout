@@ -45,6 +45,9 @@ export async function seedDemo(
   await prisma.$transaction(async (tx) => ensureStoreDefaults(tx, store.id));
 
   const drawer = drawerSettingsSchema.parse({
+    colors: { primary: '#540812', buttonText: '#FFFFFF', background: '#FFF7ED', accent: '#16A34A', highlight: '#AC6E0D' },
+    timer: { enabled: true },
+    settings: { buttonTag: 'Limited Offer' },
     announcements: { messages: ['Free shipping on orders above ₹199', 'Fast delivery in 6-7 days', 'Buy 1 Get 1 Free'] },
     rewardBar: {
       enabled: true,

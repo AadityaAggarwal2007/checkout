@@ -13,6 +13,8 @@ export interface State {
   upsells: UpsellProduct[];
   sheet: 'coupons' | null;
   codeMessage: { kind: 'ok' | 'err'; text: string } | null;
+  /** What the shopper is typing in the coupon box (kept across re-renders). */
+  codeDraft: string;
   noteOpen: boolean;
   note: string;
   termsAccepted: boolean;

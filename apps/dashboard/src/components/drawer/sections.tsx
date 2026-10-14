@@ -14,6 +14,7 @@ interface Props {
 
 export const SECTIONS: Array<{ key: SectionKey; label: string; icon: string }> = [
   { key: 'announcements', label: 'Announcements', icon: '📣' },
+  { key: 'timer', label: 'Hurry timer', icon: '⏱' },
   { key: 'rewardBar', label: 'Reward bar', icon: '☆' },
   { key: 'upsells', label: 'Upsells', icon: '👍' },
   { key: 'addons', label: 'Add-ons', icon: '＋' },
@@ -38,6 +39,8 @@ export function SectionEditor({ k, ...p }: Props & { k: SectionKey }) {
   switch (k) {
     case 'announcements':
       return <Announcements {...p} />;
+    case 'timer':
+      return <Timer {...p} />;
     case 'rewardBar':
       return <RewardBar {...p} />;
     case 'upsells':
@@ -55,6 +58,25 @@ export function SectionEditor({ k, ...p }: Props & { k: SectionKey }) {
     case 'settings':
       return <Settings {...p} />;
   }
+}
+
+function Timer({ d, edit }: Props) {
+  const t = d.timer;
+  return (
+    <>
+      <Enable on={t.enabled} onChange={(enabled) => edit('timer', { enabled })} title="the timer" />
+      <Section title="Configuration" description='Shows "Hurry! 03Min : 58Sec" under the bag title. It counts down from when the shopper opens the bag and starts again at zero.'>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Text" count={[t.text.length, 20]}>
+            <TextInput value={t.text} max={20} onChange={(text) => edit('timer', { text })} />
+          </Field>
+          <Field label="Minutes">
+            <TextInput value={String(t.minutes)} max={2} onChange={(v) => edit('timer', { minutes: Math.min(60, Math.max(1, Number(v.replace(/\D/g, '')) || 1)) })} />
+          </Field>
+        </div>
+      </Section>
+    </>
+  );
 }
 
 function Announcements({ d, edit }: Props) {
@@ -270,9 +292,14 @@ function Settings({ d, edit }: Props) {
           <Checkbox checked={s.showProperties} onChange={(showProperties) => edit('settings', { showProperties })} label="Show properties" />
           <Checkbox checked={s.openOnAdd} onChange={(openOnAdd) => edit('settings', { openOnAdd })} label="Open drawer on add to cart" />
         </div>
-        <Field label="Checkout button text" count={[s.checkoutText.length, 30]}>
-          <TextInput value={s.checkoutText} max={30} onChange={(checkoutText) => edit('settings', { checkoutText })} />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Checkout button text" count={[s.checkoutText.length, 30]}>
+            <TextInput value={s.checkoutText} max={30} onChange={(checkoutText) => edit('settings', { checkoutText })} />
+          </Field>
+          <Field label="Tag on the button" hint='Like "Limited Offer"; empty = none' count={[s.buttonTag.length, 20]}>
+            <TextInput value={s.buttonTag} max={20} onChange={(buttonTag) => edit('settings', { buttonTag })} />
+          </Field>
+        </div>
       </Section>
       <Section title="Empty cart state">
         <Field label="Title" count={[s.emptyTitle.length, 30]}>
@@ -307,6 +334,14 @@ export function Colors({ d, edit }: Props) {
       <ColorInput label="Button text" value={d.colors.buttonText} onChange={(buttonText) => edit('colors', { buttonText })} />
       <ColorInput label="Background" value={d.colors.background} onChange={(background) => edit('colors', { background })} />
       <ColorInput label="Savings / success" value={d.colors.accent} onChange={(accent) => edit('colors', { accent })} />
+      <ColorInput label="Highlight (headings, timer, gifts)" value={d.colors.highlight} onChange={(highlight) => edit('colors', { highlight })} />
+      <button
+        type="button"
+        className="text-xs font-semibold text-brand-700 hover:underline"
+        onClick={() => edit('colors', { primary: '#540812', buttonText: '#FFFFFF', background: '#FFF7ED', accent: '#16A34A', highlight: '#AC6E0D' })}
+      >
+        Use maroon &amp; gold
+      </button>
     </section>
   );
 }

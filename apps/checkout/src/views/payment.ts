@@ -8,9 +8,6 @@ import { addressLine, notYou } from './address.js';
 import { upiSection } from './upi.js';
 import { upsellView } from './upsell.js';
 
-/** Shiprocket's order: UPI, Net Banking, Card, Wallets, then the rest; cash last. */
-const ORDER = ['upi', 'netbanking', 'card', 'wallet', 'emi', 'pay_later', 'partial_cod', 'cod'];
-
 const ICON: Record<string, string> = { upi: ICONS.upi, card: ICONS.card, netbanking: ICONS.bank, wallet: ICONS.wallet, emi: ICONS.card, pay_later: ICONS.wallet, cod: ICONS.cash, partial_cod: ICONS.cash };
 
 
@@ -31,9 +28,8 @@ export function paymentView(app: App): HTMLElement {
           { class: 'card methods', 'data-test': 'pay-via' },
           h('h2', {}, 'Pay via'),
           prepaidBanner(s.methods),
-          // UPI first and open (QR inside the page) when the gateway can do it; every other method is a row.
-          ...[...s.methods]
-            .sort((a, b) => ORDER.indexOf(a.method) - ORDER.indexOf(b.method))
+          // The merchant's order (Checkout design); UPI is open (QR inside the page) when the gateway can do it.
+          ...s.methods
             .map((m) => (m.method === 'upi' && s.inlineUpi ? upiSection(app, m, sameSaving(s.methods)) : methodRow(app, m, sameSaving(s.methods)))),
           s.methods.length === 0 ? h('p', { class: 'muted' }, 'No payment method is available for this order. Please contact the store.') : null,
           !s.methods.some((m) => m.method === 'cod') && s.codReasons.length ? h('p', { class: 'muted small' }, s.codReasons[0]!) : null,
@@ -41,7 +37,35 @@ export function paymentView(app: App): HTMLElement {
     s.settings.trustBadges && !s.unserviceable
       ? h('div', { class: 'trust', 'data-test': 'trust' }, ...['100% secure payment', 'Encrypted & safe', 'Verified with OTP'].map((t) => h('span', {}, svg(ICONS.lock), t)))
       : null,
+    accountCard(app),
     app.ui.confirmCod ? codConfirm(app, app.ui.confirmCod) : null,
+  );
+}
+
+/** Account: who is logged in, and "Not you?" to forget this browser. */
+function accountCard(app: App): HTMLElement | null {
+  const c = app.state.customer;
+  if (!c) return null;
+  const open = !!app.ui.accountOpen;
+  return h(
+    'div',
+    { class: 'card account' },
+    h(
+      'button',
+      {
+        class: 'acc-head',
+        'data-test': 'account-toggle',
+        'aria-expanded': String(open),
+        onclick: () => {
+          app.ui.accountOpen = !open;
+          app.render();
+        },
+      },
+      h('span', { class: 'm-icon' }, svg(ICONS.user)),
+      h('span', {}, 'Account'),
+      svg(ICONS.down, `ck-i${open ? ' rot' : ''}`),
+    ),
+    open ? h('div', { class: 'acc-body' }, h('span', {}, formatPhone(c.phone)), notYou(app)) : null,
   );
 }
 
@@ -78,7 +102,7 @@ function methodRow(app: App, m: CheckoutMethod, savingInBanner: boolean): HTMLEl
   };
   return h(
     'button',
-    { class: 'method', 'data-test': `method-${m.method}`, disabled: !!app.ui.busy, onclick },
+    { class: `method${app.ui.picked === m.method && (app.ui.busy === 'pay' || app.state.step === 'processing') ? ' sel' : ''}`, 'data-test': `method-${m.method}`, disabled: !!app.ui.busy, onclick },
     h('span', { class: 'm-icon' }, svg(ICON[m.method] ?? ICONS.card)),
     h('span', { class: 'm-text' }, h('b', {}, app.state.settings.methodLabels[m.method] || METHOD_LABELS[m.method] || m.method), sub ? h('span', { class: 'muted' }, sub) : null, m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
     h('span', { class: 'm-price' }, h('b', {}, money(partial ? m.payNow : m.total)), partial ? h('span', { class: 'muted small' }, 'now') : null),
@@ -121,7 +145,7 @@ function codConfirm(app: App, m: CheckoutMethod): HTMLElement {
   );
 }
 
-const deliveryLabel = (l: string) => (!l || /^shipping$/i.test(l) ? 'Standard delivery' : /delivery/i.test(l) ? l : `${l} delivery`);
+const deliveryLabel = (l: string) => (/delivery/i.test(l) && !/free/i.test(l) ? l : 'Standard delivery');
 
 /** "4-6 days" -> the last day of that range, "Friday, Oct 16" (India time). */
 export function deliveryBy(eta: string | undefined, now = Date.now()): string | undefined {
@@ -150,7 +174,6 @@ function deliveryCard(app: App): HTMLElement {
     h('div', { class: 'd-name' }, h('b', {}, a.name), a.tag ? h('span', { class: 'tagchip' }, a.tag.charAt(0) + a.tag.slice(1).toLowerCase()) : null),
     h('div', { class: 'd-addr' }, addressLine(a)),
     h('div', { class: 'd-contact muted' }, h('span', {}, svg(ICONS.phone), formatPhone(s.customer?.phone ?? '')), email ? h('span', {}, svg(ICONS.mail), email) : null),
-    h('div', { class: 'd-notyou' }, notYou(app)),
     h(
       'div',
       { class: 'd-ship' },
@@ -173,7 +196,10 @@ function couponsView(app: App): HTMLElement {
       app.set(res.state);
       const rejected = res.state.coupons.rejected.find((r) => r.code === code.toUpperCase());
       if (rejected) app.ui.notice = { kind: 'error', text: rejected.message };
-      else app.ui.couponInput = '';
+      else {
+        app.ui.couponInput = '';
+        app.offerHurray(res.state, code);
+      }
     });
   const offers = c.visible.filter((v) => !c.applied.some((a) => a.code === v.code));
   return h(
@@ -196,11 +222,11 @@ function couponsView(app: App): HTMLElement {
       ),
       h('button', { class: 'apply', type: 'submit', 'data-test': 'coupon-apply', disabled: app.ui.busy === 'coupon' }, 'Apply'),
     ),
-    c.applied.length
+    c.applied.some((a) => !a.automatic)
       ? h(
           'div',
           { class: 'applied' },
-          ...c.applied.map((a) =>
+          ...c.applied.filter((a) => !a.automatic).map((a) =>
             h(
               'span',
               { class: 'applied-chip' },

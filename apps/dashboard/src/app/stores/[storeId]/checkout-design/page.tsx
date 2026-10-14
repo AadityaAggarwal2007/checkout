@@ -113,6 +113,9 @@ export default function CheckoutDesign() {
                   <ColorInput label="Button text" value={d.colors.primaryText} onChange={(primaryText) => set({ colors: { ...d.colors, primaryText } })} />
                   <ColorInput label="Savings / success" value={d.colors.accent} onChange={(accent) => set({ colors: { ...d.colors, accent } })} />
                 </div>
+                <button type="button" className="text-xs font-semibold text-brand-700 hover:underline" onClick={() => set({ colors: { primary: '#540812', primaryText: '#FFFFFF', accent: '#16A34A' } })}>
+                  Use maroon &amp; gold
+                </button>
               </>
             )}
             {tab === 'login' && banner('login', 'Shown above the mobile number. The shopper verifies with a WhatsApp code.')}

@@ -43,6 +43,14 @@ async function address(f: FrameLocator): Promise<void> {
   await f.locator('[data-test=f-name]').fill('Asha Verma');
   await f.locator('[data-test=save-address]').click();
   await expect(f.locator('[data-test=upi-panel]')).toBeVisible();
+  await dismissHurray(f);
+}
+
+/** The "Hurray!" popup for the offers that applied (B1G1, prepaid) shows once per checkout. */
+async function dismissHurray(f: FrameLocator): Promise<void> {
+  const pop = f.locator('[data-test=hurray]');
+  await pop.waitFor({ timeout: 2000 }).catch(() => undefined);
+  if (await pop.isVisible()) await pop.getByRole('button', { name: 'Yay, Thanks!' }).click();
 }
 
 /** The reference of the payment the page just started (from its own /pay answer). */
@@ -163,6 +171,8 @@ test('a returning shopper on the same browser skips OTP and the address', async 
   await expect(f.locator('[data-test=method-cod]')).toBeVisible();
   await expect(f.locator('[data-test=delivery]')).toContainText('Asha Verma');
   // "Not you?" forgets this browser.
+  await dismissHurray(f);
+  await f.locator('[data-test=account-toggle]').click();
   await f.locator('[data-test=not-you]').click();
   await expect(f.locator('[data-test=phone]')).toBeVisible();
 });

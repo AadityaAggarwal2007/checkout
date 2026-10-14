@@ -2,32 +2,21 @@ import type { App } from '../app.js';
 import { h, svg } from '../dom.js';
 import { ICONS } from '../icons.js';
 
-const STEPS = [
-  ['login', 'Mobile'],
-  ['address', 'Address'],
-  ['payment', 'Payment'],
-] as const;
-
+/** Store header (Shiprocket style): back arrow, the store's logo or name in the middle, then the store's line for this step. */
 export function headerView(app: App): HTMLElement {
   const s = app.state;
-  const current = s.step === 'processing' ? 'payment' : s.step;
-  const index = STEPS.findIndex(([k]) => k === current);
+  const step = s.step === 'processing' ? 'payment' : s.step;
+  const line = step === 'login' || step === 'address' || step === 'payment' ? s.settings.banners[step] : undefined;
   return h(
     'header',
     { class: 'ck-header' },
     h(
       'div',
       { class: 'ck-brand' },
+      h('button', { class: 'icon-btn back', 'aria-label': 'Close checkout', 'data-test': 'close', onclick: () => app.close() }, svg(ICONS.back)),
       s.store.logoUrl ? h('img', { src: s.store.logoUrl, alt: s.store.name, class: 'ck-logo' }) : h('b', {}, s.store.name),
-      h('button', { class: 'icon-btn', 'aria-label': 'Close checkout', 'data-test': 'close', onclick: () => app.close() }, svg(ICONS.close)),
     ),
-    s.step === 'done'
-      ? null
-      : h(
-          'ol',
-          { class: 'ck-steps' },
-          ...STEPS.map(([, label], i) => h('li', { class: i < index ? 'done' : i === index ? 'now' : '' }, h('span', {}, String(i + 1)), label)),
-        ),
+    line ? h('div', { class: 'banner', 'data-test': 'banner' }, line) : null,
   );
 }
 

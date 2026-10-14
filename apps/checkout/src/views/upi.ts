@@ -52,7 +52,7 @@ export function upiSection(app: App, m: CheckoutMethod, savingInBanner: boolean)
     { class: 'upi-box', 'data-test': 'upi-panel' },
     h(
       'div',
-      { class: 'upi-head' },
+      { class: `upi-head${waiting || (app.ui.busy === 'pay' && app.ui.picked === 'upi') ? ' sel' : ''}` },
       h('span', { class: 'm-icon' }, svg(ICONS.upi)),
       h('span', { class: 'm-text' }, h('b', {}, label), m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
       h('span', { class: 'm-price' }, h('b', {}, money(m.total))),
