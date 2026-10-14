@@ -26,5 +26,5 @@ jobs:
           fi
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "${PORT:-22}" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -T 30 -p "${PORT:-22}" -H "$HOST" >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -p "${PORT:-22}" -o BatchMode=yes -o ConnectTimeout=20 "checkout@$HOST" deploy
