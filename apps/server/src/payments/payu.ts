@@ -94,7 +94,7 @@ export class PayUGateway implements Gateway {
     const text = await res.text();
     // Why PayU said no, for the server log (its answer carries no secret; long hex strings are cut anyway).
     const refuse = (why: string) => {
-      console.warn(`[payu upi-intent] ${req.merchantRef}: ${why}: ${text.replace(/\s+/g, ' ').replace(/[a-f0-9]{40,}/gi, '…').slice(0, 300)}`);
+      console.warn(`[payu upi-intent] ${req.merchantRef}: ${why}: ${text.replace(/\s+/g, ' ').replace(/[a-f0-9]{40,}/gi, '…').slice(0, 1500)}`);
       return null;
     };
     if (!res.ok) return refuse(`HTTP ${res.status}`);
@@ -163,7 +163,9 @@ export function upiIntentIn(json: unknown, amount: number): string | null {
   const strings = stringsIn(json);
   const direct = strings.find((s) => s.startsWith('upi://pay?'));
   const data = (json as { result?: { intentURIData?: unknown } } | null)?.result?.intentURIData;
-  const candidate = direct ?? (typeof data === 'string' && /(^|&)pa=/.test(data) ? `upi://pay?${data}` : undefined);
+  const raw = direct ?? (typeof data === 'string' && /(^|&)pa=/.test(data) ? `upi://pay?${data}` : undefined);
+  // PayU puts our product text into tn= as it is ("Order at My Store 2"): spaces are encoded, not refused.
+  const candidate = raw?.trim().replace(/ /g, '%20');
   if (!candidate || candidate.length >= 1000 || /[\s<>"']/.test(candidate)) return null;
   const params = new URLSearchParams(candidate.slice('upi://pay?'.length));
   if (!params.get('pa')) return null;

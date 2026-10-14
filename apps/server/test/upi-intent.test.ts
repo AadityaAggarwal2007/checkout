@@ -200,5 +200,8 @@ describe('UPI inside the checkout (PayU intent, server to server)', () => {
     expect(upiIntentIn({ result: { intentURIData: 'https://secure.payu.in/upi' } }, 14780)).toBeNull();
     expect(upiIntentIn({ status: 0, message: 'error' }, 14780)).toBeNull();
     expect(upiIntentIn('upi://pay?pa=m@payu', 14780)).toBe('upi://pay?pa=m@payu'); // no amount in the link: ours applies
+    // Live PayU answers carry our product text unencoded in tn=: spaces are encoded, the link is kept.
+    const live = { metaData: { txnStatus: 'pending' }, result: { paymentId: '31293490847', merchantVpa: 'SHOP-1.payu@indus', amount: '99.00', intentURIData: 'pa=SHOP-1.payu@indus&pn=SHOP&tr=31293490847&am=99.00&cu=INR&tn=Order at My Store 2' } };
+    expect(upiIntentIn(live, 9900)).toBe('upi://pay?pa=SHOP-1.payu@indus&pn=SHOP&tr=31293490847&am=99.00&cu=INR&tn=Order%20at%20My%20Store%202');
   });
 });
