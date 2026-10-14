@@ -76,3 +76,25 @@ describe('settings', () => {
     expect((await dash('POST', '/api-keys', { name: 'x' }, admin)).statusCode).toBe(403);
   });
 });
+
+describe('go-live checklist', () => {
+  it('lists what is missing; the test setup is never "ready"', async () => {
+    const r = (await dash('GET', '/go-live')).json();
+    expect(r.ready).toBe(false);
+    const byKey = Object.fromEntries(r.items.map((i: { key: string; ok: boolean }) => [i.key, i.ok]));
+    expect(byKey).toMatchObject({ whatsapp: false, gateway: false, enabled: false });
+    expect(byKey.shipping).toBe(true); // the demo seed has a zone
+  });
+});
+
+describe('client address', () => {
+  it('a faked X-Forwarded-For does not change who we rate-limit', async () => {
+    const seen: string[] = [];
+    // nginx appends the real address to whatever the client sent: "<faked>, <real>". The faked part is ignored.
+    for (let i = 0; i < 11; i++) {
+      const res = await app.inject({ method: 'POST', url: '/api/auth/login', headers: { 'x-forwarded-for': `10.0.0.${i}, 203.0.113.9` }, payload: { email: 'nobody@example.com', password: 'wrong-password' } });
+      seen.push(String(res.statusCode));
+    }
+    expect(seen.at(-1)).toBe('429');
+  });
+});

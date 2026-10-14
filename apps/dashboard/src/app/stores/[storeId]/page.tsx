@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store-context';
 import { useEffect, useState } from 'react';
 import { AnalyticsPanel } from '@/components/analytics';
+import { GoLive } from '@/components/go-live';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 
@@ -17,6 +18,7 @@ export default function Overview() {
         <h1 className="text-2xl font-semibold">Welcome, {store.name}</h1>
         <p className="text-ink-3">Your cart drawer and checkout, in one place.</p>
       </div>
+      <GoLive storeId={store.id} />
       <AnalyticsPanel storeId={store.id} />
       <h2 className="pt-2 text-lg font-semibold">Setup</h2>
       <div className="grid gap-4 sm:grid-cols-3">

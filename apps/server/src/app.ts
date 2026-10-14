@@ -14,6 +14,7 @@ import { paymentRoutes } from './routes/payments.js';
 import { abandonedRoutes } from './routes/abandoned.js';
 import { analyticsRoutes } from './routes/analytics.js';
 import { publicApiRoutes } from './routes/public-api.js';
+import { goLiveRoutes } from './routes/golive.js';
 import { settingsRoutes } from './routes/settings.js';
 import { designRoutes } from './routes/design.js';
 import { rtoRoutes } from './routes/rto.js';
@@ -26,7 +27,10 @@ import { storefrontRoutes } from './routes/storefront.js';
 export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: opts.logger ?? false,
-    trustProxy: true, // nginx in front sets X-Forwarded-For
+    // Only our own hops on this machine (nginx, the dashboard's proxy) are trusted: the client address is the
+    // one nginx appended. `true` would take the left-most X-Forwarded-For, which any client can fake to dodge
+    // rate limits (OTP, login).
+    trustProxy: ['127.0.0.1', '::1'],
     bodyLimit: 1024 * 1024,
   });
   app.decorate('deps', deps);
@@ -94,6 +98,7 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   abandonedRoutes(app);
   settingsRoutes(app);
   publicApiRoutes(app);
+  goLiveRoutes(app);
   upsellRoutes(app);
   orderRoutes(app);
   storefrontRoutes(app);
