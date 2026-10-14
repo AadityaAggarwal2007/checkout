@@ -143,7 +143,7 @@ export async function createOrder(
 
 /** Sends the order to Shopify; a failure is kept on the order and retried by the job. */
 export async function pushOrderToShopify(prisma: PrismaClient, sink: OrderSink, orderId: string): Promise<void> {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { lines: true, store: true } }).catch(() => null);
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { lines: true, store: true, transactions: { select: { status: true, gatewayRef: true, provider: true, method: true } } } }).catch(() => null);
   if (!order || order.shopifyOrderId) return;
   try {
     const { id, name } = await sink.create(order, order.store.shopDomain, order.storeId);
@@ -162,7 +162,9 @@ export async function retryShopifyOrders(prisma: PrismaClient, sink: OrderSink):
     where: { shopifyOrderId: null, createdAt: { gt: new Date(Date.now() - 3 * 86_400_000), lt: new Date(Date.now() - 60_000) } },
     select: { id: true },
     take: 20,
-    orderBy: { createdAt: 'asc' },
+    // Least recently tried first: each failure bumps updatedAt, so orders Shopify keeps refusing cannot
+    // block newer ones (at 2000 orders a day a bad hour can leave more than 20 waiting).
+    orderBy: { updatedAt: 'asc' },
   });
   for (const o of pending) await pushOrderToShopify(prisma, sink, o.id);
   return pending.length;

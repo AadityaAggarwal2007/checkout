@@ -3,7 +3,8 @@ import { compactDecrypt, compactVerify, importPKCS8, importSPKI } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { loadEnv } from '../src/env.js';
 import { WhatsAppOtpSender } from '../src/messaging/otp-sender.js';
-import { shopifyOrderInput } from '../src/orders/sink.js';
+import { Keyring } from '../src/lib/crypto.js';
+import { ShopifyOrderSink, shopifyOrderInput } from '../src/orders/sink.js';
 import { PayGlocalGateway } from '../src/payments/payglocal.js';
 import { PayUGateway } from '../src/payments/payu.js';
 import { paiseFrom } from '../src/payments/types.js';
@@ -139,9 +140,11 @@ describe('environment safety', () => {
   });
 });
 
+let SAMPLE_ORDER: Parameters<typeof shopifyOrderInput>[0];
+const keyring = new Keyring(`k1:${Buffer.alloc(32, 7).toString('base64')}`);
 describe('Shopify order', () => {
   it('copies lines, prices, shipping, discount and the COD balance', () => {
-    const input = shopifyOrderInput({
+    const order = (SAMPLE_ORDER = {
       id: 'o1',
       storeId: 's1',
       sessionId: 'x',
@@ -171,21 +174,40 @@ describe('Shopify order', () => {
       paidAmount: 5000,
       dueOnDelivery: 10400,
       couponCodes: ['B1G1'],
-      pricing: {},
-      attribution: null,
+      pricing: { applied: [{ code: 'B1G1', amount: 12400, automatic: false }], shipping: { name: 'Standard' } },
+      attribution: { landing: 'https://kurtiya.in/?utm_source=instagram', utm: { utm_source: 'instagram' } },
+      transactions: [{ status: 'SUCCESS', gatewayRef: '403993715', provider: 'PAYU', method: 'upi' }],
       createdAt: new Date(),
       updatedAt: new Date(),
       lines: [
         { id: 'l1', orderId: 'o1', productId: '1001', variantId: '2001', title: 'Jhumka', variantTitle: null, image: null, sku: null, quantity: 2, unitPrice: 12400, compareAtPrice: null, discount: 12400, total: 12400, isGift: false },
         { id: 'l2', orderId: 'o1', productId: '1009', variantId: '2081', title: 'Gift', variantTitle: null, image: null, sku: null, quantity: 1, unitPrice: 4900, compareAtPrice: null, discount: 4900, total: 0, isGift: true },
       ],
-    });
+    } as Parameters<typeof shopifyOrderInput>[0]);
+    const input = shopifyOrderInput(order);
     const o = input.order;
     expect(o.financialStatus).toBe('PARTIALLY_PAID');
     expect(o.lineItems).toEqual([
-      { variantId: 'gid://shopify/ProductVariant/2001', quantity: 2, priceSet: { shopMoney: { amount: '124.00', currencyCode: 'INR' } } },
-      { variantId: 'gid://shopify/ProductVariant/2081', quantity: 1, priceSet: { shopMoney: { amount: '0.00', currencyCode: 'INR' } } },
+      { variantId: 'gid://shopify/ProductVariant/2001', quantity: 2, priceSet: { shopMoney: { amount: '124.00', currencyCode: 'INR' } }, requiresShipping: true },
+      { variantId: 'gid://shopify/ProductVariant/2081', quantity: 1, priceSet: { shopMoney: { amount: '0.00', currencyCode: 'INR' } }, requiresShipping: true, properties: [{ name: 'freebie', value: 'true' }] },
     ]);
+    // Like other checkouts' orders: delivery method, customer, discount and payment id in the details, source.
+    expect(o.shippingLines[0]!.title).toBe('Standard (Partial COD)');
+    expect(o.customer).toEqual({ toUpsert: { phone: '+919876543210', firstName: 'Asha', lastName: 'Verma' } });
+    expect(o.tags).toEqual(['checkout', 'ck-CK1001', 'Partial COD', 'Standard', 'B1G1', 'instagram']);
+    expect(o.customAttributes).toEqual(
+      expect.arrayContaining([
+        { key: 'PayU_txn_id', value: '403993715' },
+        { key: 'discount | B1G1 | code', value: '124.00' },
+        { key: 'landing_page_url', value: 'https://kurtiya.in/?utm_source=instagram' },
+      ]),
+    );
+    expect(o.transactions[0]).toMatchObject({ gateway: 'PayU', status: 'SUCCESS' });
+    // The safe second try leaves the newer fields out.
+    const plain = shopifyOrderInput(order, { rich: false }).order;
+    expect(plain).not.toHaveProperty('customer');
+    expect(plain).not.toHaveProperty('taxesIncluded');
+    expect(plain.lineItems[1]).not.toHaveProperty('properties');
     expect(o.discountCode?.itemFixedDiscountCode.amountSet.shopMoney.amount).toBe('124.00');
     expect(o.shippingLines[0]!.priceSet.shopMoney.amount).toBe('30.00');
     expect(o.transactions).toHaveLength(2);
@@ -193,5 +215,30 @@ describe('Shopify order', () => {
     expect(o.tags).toContain('Partial COD');
     expect(paiseFrom('147.80')).toBe(14780);
     expect(paiseFrom('abc')).toBeUndefined();
+  });
+
+  it('if Shopify refuses the extras, the order still goes in without them', async () => {
+    const bodies: Array<{ variables: { order: Record<string, unknown> } }> = [];
+    const answers = [
+      { data: { orderCreate: { order: null, userErrors: [{ message: 'customer is invalid' }] } } },
+      { data: { orderCreate: { order: { id: 'gid://shopify/Order/77', name: '#1001' }, userErrors: [] } } },
+    ];
+    const fetchImpl = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(JSON.stringify(answers.shift()), { status: 200 });
+    }) as unknown as typeof fetch;
+    const prisma = { shopifyConnection: { findUnique: async () => ({ accessTokenEnc: keyring.encrypt('tok') }) } } as never;
+    const sink = new ShopifyOrderSink(prisma, keyring, '2025-01', fetchImpl);
+    const order = { ...SAMPLE_ORDER };
+    expect(await sink.create(order, 'x.myshopify.com', 's1')).toEqual({ id: '77', name: '#1001' });
+    expect(bodies[0]!.variables.order).toHaveProperty('customer');
+    expect(bodies[1]!.variables.order).not.toHaveProperty('customer');
+
+    // A retry after an unreadable failure finds the order Shopify already made: no second order.
+    bodies.length = 0;
+    answers.push({ data: { orders: { nodes: [{ id: 'gid://shopify/Order/77', name: '#1001' }] } } } as never);
+    expect(await sink.create({ ...order, shopifyError: 'Shopify orderCreate HTTP 504' }, 'x.myshopify.com', 's1')).toEqual({ id: '77', name: '#1001' });
+    expect(bodies).toHaveLength(1);
+    expect(JSON.stringify(bodies[0])).toContain("tag:'ck-CK1001'");
   });
 });
