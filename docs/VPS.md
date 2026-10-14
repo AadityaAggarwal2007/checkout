@@ -56,14 +56,24 @@ sudo cat /etc/checkout/demo-login.txt
 ```
 Isme dashboard ka email aur ek **naya random password** hai (local wala `local-password` VPS par kabhi nahi).
 
-### 5. Try karo
+### 5. GitHub ko update ki chaabi do (ek baar) — phir har update Claude khud karega
+Script ke aakhir mein **"For automatic updates from GitHub"** ke neeche do cheezein chhapi hongi.
+GitHub → **checkout** repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+- Name `VPS_HOST`, value: jo IP chhapa hai
+- Name `VPS_SSH_KEY`, value: `-----BEGIN OPENSSH PRIVATE KEY-----` se `-----END OPENSSH PRIVATE KEY-----` tak
+  poora (dono lines samet)
+
+Yeh key **sirf checkout ko update kar sakti hai**: VPS par na shell khulta hai, na root, na ShipTrack. Isko chat mein
+kabhi mat bhejna; sirf GitHub Secrets mein. Dobara dekhni ho: `sudo cat /etc/checkout/deploy_key`.
+
+### 6. Try karo
 - **Demo store:** `https://demo-checkout.shiptrack.store` → product → Add to cart → Checkout
   (OTP page par peele box mein, payment = test gateway, asli paisa nahi).
 - **Dashboard:** `https://checkout.shiptrack.store` → demo login.
 
 ## Baad mein
 
-**Naya code aane par** (main push karunga, aap bas yeh chalao):
+**Naya code aane par:** step 5 ho gaya ho to Claude GitHub ke "Deploy to VPS" se khud update kar dega. Haath se karna ho:
 ```bash
 sudo bash /srv/checkout/app/deploy/update.sh
 ```
@@ -88,5 +98,6 @@ sudo userdel -r checkout; sudo rm -rf /srv/checkout /etc/checkout
 ## Kya test hua hai
 Script ek bilkul nayi Ubuntu 24.04 machine par chala kar dekhi gayi (ek doosri nginx site pehle se thi, woh
 waisi hi rahi): user, Node, PM2, database, build, apps, nginx routing, HTTPS ke saath browser mein poora
-order (demo store → OTP → address → UPI test gateway → order → dashboard), aur `update.sh`.
+order (demo store → OTP → address → UPI test gateway → order → dashboard), `update.sh`, aur deploy key (usse
+`cat /etc/passwd` maanga to bhi sirf update chala; shell nahi khula).
 Asli Hostinger VPS par pehli baar chalegi: koi line laal aaye to uska screenshot bhejna.
