@@ -6,7 +6,9 @@ APP=/srv/checkout/app
 ENV_FILE=/etc/checkout/checkout.env
 [ "$(id -u)" = 0 ] || { echo "run it with sudo"; exit 1; }
 [ -f "$ENV_FILE" ] || { echo "not installed yet: run deploy/install.sh first"; exit 1; }
-as_app() { sudo -u checkout -H bash -lc "export NVM_DIR=\$HOME/.nvm; . \$NVM_DIR/nvm.sh; $1"; }
+# CHECKOUT_EXTRA_CA: only behind a TLS-inspecting proxy (never needed on a normal VPS).
+EXTRA_CA="${CHECKOUT_EXTRA_CA:+export NODE_EXTRA_CA_CERTS=$CHECKOUT_EXTRA_CA GIT_SSL_CAINFO=$CHECKOUT_EXTRA_CA npm_config_cafile=$CHECKOUT_EXTRA_CA;}"
+as_app() { sudo -u checkout -H bash -c "$EXTRA_CA export NVM_DIR=\$HOME/.nvm; . \$NVM_DIR/nvm.sh; $1"; }
 BRANCH=$(as_app "cd $APP && git rev-parse --abbrev-ref HEAD")
 API_PORT=$(grep '^PORT=' "$ENV_FILE" | cut -d= -f2)
 echo "== Code ($BRANCH)"

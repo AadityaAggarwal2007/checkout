@@ -87,9 +87,11 @@ if [ -n "$need" ]; then apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt
 say "Linux user '$APP_USER' with its own Node $NODE_MAJOR and PM2"
 id -u "$APP_USER" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "$APP_USER"
 mkdir -p "$BASE" && chown "$APP_USER:$APP_USER" "$BASE"
-as_app() { sudo -u "$APP_USER" -H bash -lc "export NVM_DIR=\$HOME/.nvm; [ -s \$NVM_DIR/nvm.sh ] && . \$NVM_DIR/nvm.sh; cd ~; $1"; }
+# CHECKOUT_EXTRA_CA: only behind a TLS-inspecting proxy (never needed on a normal VPS).
+EXTRA_CA="${CHECKOUT_EXTRA_CA:+export NODE_EXTRA_CA_CERTS=$CHECKOUT_EXTRA_CA GIT_SSL_CAINFO=$CHECKOUT_EXTRA_CA npm_config_cafile=$CHECKOUT_EXTRA_CA;}"
+as_app() { sudo -u "$APP_USER" -H bash -c "$EXTRA_CA export NVM_DIR=\$HOME/.nvm; [ -s \$NVM_DIR/nvm.sh ] && . \$NVM_DIR/nvm.sh; cd ~; $1"; }
 if ! as_app 'command -v nvm' >/dev/null 2>&1; then
-  as_app 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | PROFILE=/dev/null bash >/dev/null'
+  as_app 'mkdir -p "$NVM_DIR" && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | PROFILE=/dev/null bash >/dev/null'
 fi
 as_app "nvm install $NODE_MAJOR >/dev/null && nvm alias default $NODE_MAJOR >/dev/null && node -v"
 as_app 'command -v pm2 >/dev/null || npm install -g pm2@5.4.3 --no-audit --no-fund >/dev/null'
@@ -266,5 +268,5 @@ echo "Dashboard     https://$DOMAIN"
 [ -z "$DEMO_DOMAIN" ] || echo "Demo store    https://$DEMO_DOMAIN"
 [ ! -f "$ETC/demo-login.txt" ] || echo "Demo login    sudo cat $ETC/demo-login.txt"
 [ "$MODE" = live ] && echo "Live mode: fill the empty keys in $ENV_FILE (sudo nano $ENV_FILE), then: sudo bash $APP/deploy/update.sh"
-echo "Logs          sudo -u $APP_USER -H bash -lc 'pm2 logs --lines 50'"
+echo "Logs          sudo -u $APP_USER -H bash -c '. ~/.nvm/nvm.sh && pm2 logs --lines 50 --nostream'"
 echo "Update later  sudo bash $APP/deploy/update.sh"

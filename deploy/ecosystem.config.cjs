@@ -26,6 +26,7 @@ const apps = [
     name: 'checkout-api',
     cwd: `${APP}/apps/server`,
     script: 'src/main.ts',
+    interpreter: 'node', // PM2 would guess bun for .ts
     node_args: `--env-file=${ENV_FILE} --import tsx`,
     max_memory_restart: '600M',
   },
@@ -43,6 +44,7 @@ if (demo) {
     name: 'checkout-demo-store',
     cwd: `${APP}/apps/devstore`,
     script: 'server.ts',
+    interpreter: 'node',
     node_args: '--import tsx',
     env: { PORT: env.DEMO_STORE_PORT || '5204', API_URL: env.PUBLIC_URL, WIDGET_KEY: 'dev-widget-key' },
     max_memory_restart: '200M',
