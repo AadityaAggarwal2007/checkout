@@ -101,9 +101,25 @@ p{margin:4px 0 12px}
 .trust{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}.trust span{display:inline-flex;gap:4px;align-items:center}
 .reasons{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}.exit-save{color:#047857;font-weight:600}
 
-.upi .upi-qr{display:inline-flex;padding:10px;background:#fff;border:1px solid var(--line);border-radius:12px;margin:6px 0}
-.upi .upi-qr svg{display:block;width:220px;height:220px}
-.upi-apps{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin:8px 0 4px}
-.upi-apps .btn{margin:0;padding:12px 10px;font-size:14px}.upi-apps .btn:first-child{grid-column:1/-1}
+.upi-box .hint{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;font-size:13px}.upi-box .hint .spin{width:16px;height:16px;border-width:2px;margin:0}
 a.btn{text-decoration:none}
-.upi .hint .spin{width:16px;height:16px;border-width:2px;margin:0}
+.m-icon{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;color:#374151;background:#fff}
+.methods .method{border-top:1px dashed #D1D5DB;padding:14px 4px}
+.upi-box{margin:2px 0 4px}
+.upi-head{display:flex;align-items:center;gap:10px;padding:10px 4px;font-size:15px}.upi-head>svg{color:var(--muted)}
+.upi-body{display:flex;gap:16px;align-items:center;padding:12px 4px 16px}
+.upi-body.col{flex-direction:column;align-items:stretch;gap:10px;font-size:14px;text-align:center}.upi-body.col .btn{margin-top:2px}
+.qr-wrap{position:relative;flex:none;padding:8px;background:#fff;border:1px solid var(--line);border-radius:10px;line-height:0}
+.qr-wrap svg{display:block;width:140px;height:140px}.qr-wrap.live svg{width:180px;height:180px}
+.qr-wrap.blur svg{filter:blur(4px);opacity:.5}
+.show-qr{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:0;border-radius:8px;padding:9px 16px;background:var(--primary);color:var(--primary-text);font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.show-qr:disabled{opacity:.7;cursor:default}
+.upi-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.upi-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.upi-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;cursor:pointer;text-decoration:none;color:var(--muted);font-size:11px;min-width:0}
+.upi-tile:disabled{cursor:default}
+.upi-logo{display:flex;align-items:center;justify-content:center;width:100%;max-width:60px;aspect-ratio:1;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:800;font-size:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.upi-tile.on .upi-logo{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
+.upi-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.upi-logo.gpay{color:#4285F4}.upi-logo.phonepe{color:#5F259F;font-size:22px}.upi-logo.paytm{color:#00B9F1;font-size:13px;font-style:italic}.upi-logo.cred{color:#111}.upi-logo.other{color:var(--muted);font-weight:400;font-size:24px}
+@media (max-width:420px){.upi-body:not(.col){flex-direction:column;text-align:center}}

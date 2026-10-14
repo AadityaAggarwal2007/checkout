@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Gateway, GatewayStart, GatewayStatus, PaymentRequest } from './types.js';
+import { rupees, type Gateway, type GatewayStart, type GatewayStatus, type PaymentRequest, type UpiIntentRequest, type UpiIntentStart } from './types.js';
 
 /**
  * Local test gateway: our own page with "Pay" / "Fail" buttons (/checkout/dev-gateway/:ref).
@@ -14,6 +14,12 @@ export class DevGateway implements Gateway {
 
   async start(req: PaymentRequest): Promise<GatewayStart> {
     return { kind: 'redirect', url: `${this.publicUrl}/checkout/dev-gateway/${encodeURIComponent(req.merchantRef)}`, gatewayRef: `dev_${req.merchantRef}` };
+  }
+
+  /** Like PayU's S2S intent, so local runs and e2e tests see the QR in the page; "paying" it = the Pay button on the test page. */
+  async startUpiIntent(req: UpiIntentRequest): Promise<UpiIntentStart | null> {
+    const q = new URLSearchParams({ pa: 'test@dev', pn: 'Test gateway', am: rupees(req.amount), tr: req.merchantRef, cu: 'INR' });
+    return { intent: `upi://pay?${q.toString().replace(/\+/g, '%20')}`, gatewayRef: `dev_${req.merchantRef}` };
   }
 
   async status(merchantRef: string): Promise<GatewayStatus> {

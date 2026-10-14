@@ -3,6 +3,9 @@ import { h } from './dom.js';
 import { pixel, purchase } from './pixel.js';
 import { cartApi } from './shopify-cart.js';
 
+/** upi://pay?… and the same link in the scheme of Google Pay, PhonePe, Paytm or CRED. */
+export const UPI_LINK = /^(upi:\/\/pay|tez:\/\/upi\/pay|phonepe:\/\/pay|paytmmp:\/\/pay|credpay:\/\/upi\/pay)\?[^\s<>"'\\]{1,1000}$/;
+
 /**
  * Our checkout in an iframe over the store page: a centred popup on desktop, full screen on
  * phones. The page inside is on our origin, so the store's scripts cannot read the OTP,
@@ -95,6 +98,10 @@ export class CheckoutFrame {
       case 'ck:navigate':
         // Only our own gateway hand-off page (phones pay in the same tab).
         if (typeof msg.url === 'string' && msg.url.startsWith(`${this.origin}/checkout/go/`)) window.location.href = msg.url;
+        break;
+      case 'ck:open-upi':
+        // Only a UPI payment link for one of the known UPI apps (the checkout got it from our server).
+        if (typeof msg.url === 'string' && UPI_LINK.test(msg.url)) window.location.href = msg.url;
         break;
     }
   }

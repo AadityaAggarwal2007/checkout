@@ -5,7 +5,10 @@ import { h, svg } from '../dom.js';
 import { formatPhone, money } from '../format.js';
 import { ICONS } from '../icons.js';
 import { addressLine, notYou } from './address.js';
+import { upiSection } from './upi.js';
 import { upsellView } from './upsell.js';
+
+const ICON: Record<string, string> = { upi: ICONS.upi, card: ICONS.card, netbanking: ICONS.bank, wallet: ICONS.wallet, emi: ICONS.card, pay_later: ICONS.wallet, cod: ICONS.cash, partial_cod: ICONS.cash };
 
 const SUB: Record<string, string> = {
   upi: 'Google Pay, PhonePe, Paytm & more',
@@ -32,7 +35,7 @@ export function paymentView(app: App): HTMLElement {
           h('button', {
             class: 'link',
             'data-test': 'change-address',
-            onclick: () => void app.run('address', async () => app.set((await app.api.editAddress()).state)),
+            onclick: () => void app.edit('address', async () => app.set((await app.api.editAddress()).state)),
           }, 'Change'),
         )
       : null,
@@ -42,10 +45,13 @@ export function paymentView(app: App): HTMLElement {
       ? h('div', { class: 'notice error' }, 'Sorry, we do not deliver to this pincode yet. Please choose another address.')
       : h(
           'div',
-          { class: 'card methods' },
-          h('h2', {}, 'Choose a payment method'),
+          { class: 'card methods', 'data-test': 'pay-via' },
+          h('h2', {}, 'Pay via'),
           prepaidBanner(s.methods),
-          ...s.methods.map((m) => methodRow(app, m, sameSaving(s.methods))),
+          // UPI first and open (QR inside the page) when the gateway can do it; every other method is a row.
+          ...[...s.methods]
+            .sort((a, b) => Number(b.method === 'upi' && !!s.inlineUpi) - Number(a.method === 'upi' && !!s.inlineUpi))
+            .map((m) => (m.method === 'upi' && s.inlineUpi ? upiSection(app, m, sameSaving(s.methods)) : methodRow(app, m, sameSaving(s.methods)))),
           s.methods.length === 0 ? h('p', { class: 'muted' }, 'No payment method is available for this order. Please contact the store.') : null,
           !s.methods.some((m) => m.method === 'cod') && s.codReasons.length ? h('p', { class: 'muted small' }, s.codReasons[0]!) : null,
         ),
@@ -90,6 +96,7 @@ function methodRow(app: App, m: CheckoutMethod, savingInBanner: boolean): HTMLEl
   return h(
     'button',
     { class: 'method', 'data-test': `method-${m.method}`, disabled: !!app.ui.busy, onclick },
+    h('span', { class: 'm-icon' }, svg(ICON[m.method] ?? ICONS.card)),
     h('span', { class: 'm-text' }, h('b', {}, app.state.settings.methodLabels[m.method] || METHOD_LABELS[m.method] || m.method), h('span', { class: 'muted' }, sub), m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
     h('span', { class: 'm-price' }, h('b', {}, money(partial ? m.payNow : m.total)), partial ? h('span', { class: 'muted small' }, 'now') : null),
     svg(ICONS.chevron),
@@ -134,7 +141,7 @@ function codConfirm(app: App, m: CheckoutMethod): HTMLElement {
 function couponsView(app: App): HTMLElement {
   const c = app.state.coupons;
   const apply = (code: string) =>
-    void app.run('coupon', async () => {
+    void app.edit('coupon', async () => {
       const res = await app.api.coupon({ add: code });
       app.set(res.state);
       const rejected = res.state.coupons.rejected.find((r) => r.code === code.toUpperCase());
@@ -167,7 +174,7 @@ function couponsView(app: App): HTMLElement {
               'span',
               { class: 'applied-chip' },
               `${a.code ?? a.title ?? 'Offer'}${a.amount > 0 ? ` · −${money(a.amount)}` : ''}`,
-              a.code ? h('button', { class: 'x', 'aria-label': `Remove ${a.code}`, onclick: () => void app.run('coupon', async () => app.set((await app.api.coupon({ remove: a.code })).state)) }, '×') : null,
+              a.code ? h('button', { class: 'x', 'aria-label': `Remove ${a.code}`, onclick: () => void app.edit('coupon', async () => app.set((await app.api.coupon({ remove: a.code })).state)) }, '×') : null,
             ),
           ),
         )

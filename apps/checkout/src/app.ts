@@ -36,6 +36,8 @@ export interface Ui {
   payUrl?: string;
   /** When the UPI QR / app links shown in this page stop being offered (unix ms). */
   upiExpiresAt?: number;
+  /** Phone: the UPI app tile tapped (its scheme), opened as soon as the gateway gives the payment link. */
+  upiApp?: string;
   busy?: string;
   notice?: { kind: 'error' | 'info'; text: string };
 }
@@ -133,8 +135,9 @@ export class App {
 
   // ---------------------------------------------------------------- actions used by views
 
-  async pay(m: CheckoutMethod): Promise<void> {
+  async pay(m: CheckoutMethod, upiApp?: string): Promise<void> {
     const phone = isPhone();
+    this.ui.upiApp = upiApp;
     // UPI on a gateway that can show its QR here: no tab; if the gateway then declines, the store page navigates.
     const inline = m.method === 'upi' && !!this.state.inlineUpi;
     // Desktop: open the tab inside the click (popup blockers), point it at the gateway when ready.
@@ -154,6 +157,7 @@ export class App {
         if (res.upi) {
           this.ui.upiExpiresAt = res.upi.expiresAt;
           win?.close();
+          if (phone && upiApp) this.openUpiApp(upiApp + res.upi.intent.slice('upi://pay?'.length));
         } else if (res.pay) {
           this.ui.payUrl = res.pay.url;
           if (win && !win.closed) {
@@ -171,6 +175,12 @@ export class App {
     });
   }
 
+  /** Opens the UPI app (the store page does it: the tap was inside this frame). If the phone blocks it, the tiles stay as links. */
+  openUpiApp(url: string): void {
+    if (window.parent !== window) toStore({ type: 'ck:open-upi', url });
+    else window.location.href = url;
+  }
+
   /** Same-tab navigation to our gateway page: the store page does it (an iframe cannot move the top page). */
   go(url: string): void {
     if (window.parent !== window) toStore({ type: 'ck:navigate', url });
@@ -181,6 +191,23 @@ export class App {
     if (!this.ui.payUrl) return;
     if (isPhone()) return this.go(this.ui.payUrl);
     this.gatewayWindow = window.open(this.ui.payUrl, '_blank');
+  }
+
+  /** A UPI QR of this page is open (or just expired): the payment list stays on screen around it. */
+  upiInline(): boolean {
+    const p = this.state.payment;
+    return this.state.step === 'processing' && p.method === 'upi' && (!!p.upi || !!this.ui.upiExpiresAt);
+  }
+
+  /** Coupon / address changes while a UPI QR is open: the open payment is let go first (the server refuses changes while paying). */
+  async edit(name: string, fn: () => Promise<void>): Promise<void> {
+    await this.run(name, async () => {
+      if (this.state.step === 'processing') {
+        this.ui.upiExpiresAt = undefined;
+        this.set((await this.api.cancelPayment()).state);
+      }
+      await fn();
+    });
   }
 
   async cancelPayment(): Promise<void> {
@@ -237,7 +264,7 @@ export class App {
         body = paymentView(this);
         break;
       case 'processing':
-        body = processingView(this);
+        body = this.upiInline() ? paymentView(this) : processingView(this);
         break;
       case 'done':
         body = doneView(this);

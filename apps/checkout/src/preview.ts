@@ -33,6 +33,7 @@ function sample(settings: CheckoutSettings, step: Step, storeName: string): Chec
     codReasons: [],
     unserviceable: false,
     payment: { status: 'idle' },
+    inlineUpi: true,
     order: null,
   };
 }

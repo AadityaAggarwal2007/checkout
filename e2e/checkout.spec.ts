@@ -42,7 +42,21 @@ async function address(f: FrameLocator): Promise<void> {
   await f.locator('[data-test=f-line1]').fill('12 MG Road');
   await f.locator('[data-test=f-name]').fill('Asha Verma');
   await f.locator('[data-test=save-address]').click();
-  await expect(f.locator('[data-test=method-upi]')).toBeVisible();
+  await expect(f.locator('[data-test=upi-panel]')).toBeVisible();
+}
+
+/** The reference of the payment the page just started (from its own /pay answer). */
+async function payRef(page: Page, start: () => Promise<void>): Promise<string> {
+  const [res] = await Promise.all([page.waitForResponse((r) => r.url().endsWith('/checkout/api/pay') && r.request().method() === 'POST'), start()]);
+  return ((await res.json()) as { pay: { ref: string } }).pay.ref;
+}
+
+/** "Paying" a UPI QR locally = the Pay button on the test gateway's page for that reference. */
+async function payOnTestGateway(page: Page, ref: string): Promise<void> {
+  const tab = await page.context().newPage();
+  await tab.goto(`${API}/checkout/dev-gateway/${ref}`);
+  await tab.getByRole('button', { name: /^Pay/ }).click();
+  await tab.close();
 }
 
 async function devStoreOrders(page: Page): Promise<Array<{ name: string; order: { financialStatus: string; customAttributes: Array<{ key: string; value: string }> } }>> {
@@ -65,26 +79,42 @@ test('desktop: COD with the confirmation popup places the order and empties the 
   await expect(page.locator('#ck-checkout')).toHaveCount(0);
 });
 
-test('desktop: UPI opens the gateway in a new tab; a failure can be retried, then it is paid', async ({ page, context }) => {
+test('desktop: a card failure can be retried; UPI shows its QR inside the page and gets paid', async ({ page, context }) => {
   const f = await openCheckout(page);
   await login(page, f, newPhone());
   await address(f);
 
-  const [failTab] = await Promise.all([context.waitForEvent('page'), f.locator('[data-test=method-upi]').click()]);
+  // UPI is open at the top of "Pay via" with a blurred QR; other methods are rows below it.
+  await expect(f.locator('[data-test=pay-via] h2')).toHaveText('Pay via');
+  await expect(f.locator('[data-test=show-qr]')).toBeVisible();
+
+  const [failTab] = await Promise.all([context.waitForEvent('page'), f.locator('[data-test=method-card]').click()]);
   await failTab.waitForURL(/dev-gateway/);
   await failTab.getByRole('button', { name: 'Fail payment' }).click();
   await expect(f.locator('[data-test=payment-failed]')).toBeVisible();
 
-  const [payTab] = await Promise.all([context.waitForEvent('page'), f.locator('[data-test=method-card]').click()]);
-  await payTab.waitForURL(/dev-gateway/);
-  await expect(f.locator('[data-test=processing]')).toBeVisible();
-  await payTab.getByRole('button', { name: /^Pay/ }).click();
+  const ref = await payRef(page, () => f.locator('[data-test=show-qr]').click());
+  await expect(f.locator('[data-test=upi-inline] svg')).toBeVisible();
+  await expect(f.locator('[data-test=method-card]')).toBeVisible(); // still free to switch
+  await payOnTestGateway(page, ref);
   await expect(f.locator('[data-test=thank-you]')).toBeVisible();
   const number = await f.locator('[data-test=order-number]').textContent();
   await expect.poll(async () => (await devStoreOrders(page)).find((o) => o.order.customAttributes.some((a) => a.value === number))?.order.financialStatus).toBe('PAID');
 });
 
-test('phone: full screen, UPI in the same tab, back to the store with an empty cart', async ({ browser }) => {
+test('desktop: a coupon change while the QR is open lets the QR go first', async ({ page }) => {
+  const f = await openCheckout(page);
+  await login(page, f, newPhone());
+  await address(f);
+  await f.locator('[data-test=show-qr]').click();
+  await expect(f.locator('[data-test=upi-inline]')).toBeVisible();
+  await f.locator('[data-test=coupons-toggle]').click();
+  await f.locator('[data-test=coupon-input]').fill('NOPE');
+  await f.locator('[data-test=coupon-input]').press('Enter');
+  await expect(f.locator('[data-test=show-qr]')).toBeVisible(); // back to the blurred QR, no "payment in progress" error
+});
+
+test('phone: full screen, a card payment in the same tab, back to the store with an empty cart', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   const f = await openCheckout(page);
@@ -92,7 +122,7 @@ test('phone: full screen, UPI in the same tab, back to the store with an empty c
   expect(box?.width).toBe(390);
   await login(page, f, newPhone());
   await address(f);
-  await f.locator('[data-test=method-upi]').click();
+  await f.locator('[data-test=method-card]').click();
   await page.waitForURL(/dev-gateway/);
   await page.getByRole('button', { name: /^Pay/ }).click();
   await page.waitForURL(/\/checkout\/done\//);
@@ -100,6 +130,22 @@ test('phone: full screen, UPI in the same tab, back to the store with an empty c
   await page.getByRole('link', { name: 'Continue shopping' }).click();
   await page.waitForURL(`${STORE}/`);
   await expect(page.locator('.cart-count-bubble')).toHaveText('0');
+  await context.close();
+});
+
+test('phone: UPI app tiles; a tap starts the payment and the app links carry it', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const f = await openCheckout(page);
+  await login(page, f, newPhone());
+  await address(f);
+  await expect(f.locator('[data-test=upi-app-phonepe]')).toBeVisible();
+  // The store page is asked to open PhonePe (headless has no such app: the page simply stays).
+  const ref = await payRef(page, () => f.locator('[data-test=upi-app-phonepe]').click());
+  await expect(f.locator('[data-test=upi-open-phonepe]')).toHaveAttribute('href', new RegExp(`^phonepe://pay\\?pa=test%40dev.*tr=${ref}`));
+  await expect(f.locator('[data-test=upi-open-other]')).toHaveAttribute('href', /^upi:\/\/pay\?/);
+  await payOnTestGateway(page, ref);
+  await expect(f.locator('[data-test=thank-you]')).toBeVisible();
   await context.close();
 });
 
