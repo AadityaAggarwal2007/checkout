@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useStore } from '@/lib/store-context';
 import { useEffect, useState } from 'react';
+import { AnalyticsPanel } from '@/components/analytics';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 
@@ -11,11 +12,13 @@ export default function Overview() {
   const live = seen && Date.now() - seen.getTime() < 24 * 3600 * 1000;
   const snippet = `<script src="${typeof window === 'undefined' ? '' : window.location.origin}/storefront/loader.js" data-key="${store.widgetKey}" defer></script>`;
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Welcome, {store.name}</h1>
         <p className="text-ink-3">Your cart drawer and checkout, in one place.</p>
       </div>
+      <AnalyticsPanel storeId={store.id} />
+      <h2 className="pt-2 text-lg font-semibold">Setup</h2>
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Cart drawer" value={live ? 'Live on your store' : 'Not seen yet'} tone={live ? 'ok' : 'warn'} />
         <Stat label="Shopify" value={store.shopify && !store.shopify.uninstalledAt ? 'Connected' : 'Not connected'} tone={store.shopify && !store.shopify.uninstalledAt ? 'ok' : 'warn'} />

@@ -160,3 +160,15 @@ test('upsell: the kurti checkout offers a jewellery box with a timer; adding it 
   await f.locator('[data-test=confirm-cod]').click();
   await expect(f.locator('[data-test=thank-you]')).toBeVisible();
 });
+
+test('dashboard home shows sales and the funnel', async ({ page }) => {
+  await page.goto('http://localhost:5103/login');
+  await page.fill('input[type=email]', 'owner@local.test');
+  await page.fill('input[type=password]', 'local-password');
+  await page.click('button:has-text("Log in")');
+  await page.waitForURL(/\/stores\/[^/]+$/);
+  await expect(page.locator('[data-test=kpi-orders]')).not.toHaveText('0'); // the tests above placed orders
+  await expect(page.locator('[data-test=funnel]')).toContainText('Order placed');
+  await page.click('a:has-text("Abandoned checkouts")');
+  await expect(page.getByRole('heading', { name: 'Abandoned checkouts' })).toBeVisible();
+});

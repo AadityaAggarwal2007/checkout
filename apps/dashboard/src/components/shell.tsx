@@ -8,7 +8,7 @@ import { StoreContext, type StoreInfo } from '@/lib/store-context';
 const NAV: Array<{ href: string; label: string; icon: string; soon?: string }> = [
   { href: '', label: 'Dashboard', icon: '▦' },
   { href: '/orders', label: 'Orders', icon: '◫' },
-  { href: '/abandoned', label: 'Abandoned checkouts', icon: '⊘', soon: 'Phase 5' },
+  { href: '/abandoned', label: 'Abandoned checkouts', icon: '⊘' },
   { href: '/cart-drawer', label: 'Cart drawer', icon: '⊞' },
   { href: '/checkout-design', label: 'Checkout design', icon: '✎' },
   { href: '/coupons', label: 'Coupons', icon: '%' },
