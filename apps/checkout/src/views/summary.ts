@@ -31,7 +31,7 @@ export function summaryView(app: App): HTMLElement {
               'div',
               { class: 'line' },
               h('div', { class: 'thumb' }, l.image ? h('img', { src: l.image, alt: '' }) : null, h('span', { class: 'qty' }, String(l.quantity))),
-              h('div', { class: 'line-info' }, h('div', { class: 'line-title' }, l.title), l.variantTitle ? h('div', { class: 'muted' }, l.variantTitle) : null, l.gift ? h('div', { class: 'gift' }, 'Free gift') : null),
+              h('div', { class: 'line-info' }, h('div', { class: 'line-title' }, l.title), l.variantTitle ? h('div', { class: 'muted' }, l.variantTitle) : null, l.gift ? h('div', { class: 'gift' }, 'Free gift') : null, l.upsell ? h('button', { class: 'link small', 'data-test': 'upsell-remove', disabled: !!app.ui.busy, onclick: () => void app.run('upsell', async () => app.set((await app.api.upsell({ lineId: l.lineId })).state)) }, 'Remove') : null),
               h(
                 'div',
                 { class: 'line-price' },

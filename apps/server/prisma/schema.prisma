@@ -635,6 +635,8 @@ model CheckoutSession {
   note         String?
   /// Buy it now (single variant) vs cart.
   source       String        @default("cart")
+  /// Upsell offers: when each was first shown (timer) and the lines added from them (locked % off).
+  upsell       Json?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   completedAt  DateTime?

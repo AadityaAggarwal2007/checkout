@@ -1,3 +1,4 @@
+import type { CheckoutUpsell } from './upsell.js';
 import { z } from 'zod';
 
 /**
@@ -95,6 +96,8 @@ export interface CheckoutLine {
   total: number;
   freeUnits: number;
   gift?: boolean;
+  /** Added from an upsell offer (the shopper may remove it). */
+  upsell?: boolean;
 }
 
 export interface CheckoutMethod {
@@ -133,6 +136,8 @@ export interface CheckoutState {
   };
   coupons: { applied: Array<{ code?: string; title?: string; amount: number; automatic: boolean }>; rejected: Array<{ code: string; message: string }>; visible: Array<{ code: string; title?: string; details?: string[] }> };
   methods: CheckoutMethod[];
+  /** "Add to your order" offer on the payment step. */
+  upsell: CheckoutUpsell | null;
   /** Why COD is not offered (shown under the list). */
   codReasons: string[];
   unserviceable: boolean;

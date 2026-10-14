@@ -5,6 +5,7 @@ import { h, svg } from '../dom.js';
 import { formatPhone, money } from '../format.js';
 import { ICONS } from '../icons.js';
 import { addressLine, notYou } from './address.js';
+import { upsellView } from './upsell.js';
 
 const SUB: Record<string, string> = {
   upi: 'Google Pay, PhonePe, Paytm & more',
@@ -35,6 +36,7 @@ export function paymentView(app: App): HTMLElement {
           }, 'Change'),
         )
       : null,
+    s.upsell ? upsellView(app, s.upsell) : null,
     couponsView(app),
     s.unserviceable
       ? h('div', { class: 'notice error' }, 'Sorry, we do not deliver to this pincode yet. Please choose another address.')

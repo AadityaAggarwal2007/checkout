@@ -6,3 +6,4 @@ export * from './shipping.js';
 export * from './coupons.js';
 export * from './coupon-text.js';
 export * from './rto.js';
+export * from './upsell.js';

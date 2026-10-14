@@ -109,6 +109,16 @@ export async function seedDemo(
       create: { storeId: store.id, provider: 'DEV', active: true, credentialsEnc: '' },
       update: { active: true },
     });
+    // A demo upsell: jewellery boxes, 20% off for 10 minutes, offered with kurtis.
+    if ((await prisma.upsellRule.count({ where: { storeId: store.id } })) === 0) {
+      await prisma.upsellRule.create({
+        data: {
+          storeId: store.id,
+          name: 'Boxes with kurtis',
+          rule: { when: { kind: 'collections', collectionIds: ['9002'] }, productIds: ['1004', '1005'], audience: 'all', discountPercent: 20, timerMinutes: 10, title: 'Add a jewellery box', maxItems: 3 },
+        },
+      });
+    }
   }
   return { storeId: store.id, userId: user.id };
 }

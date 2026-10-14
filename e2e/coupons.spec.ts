@@ -66,3 +66,16 @@ test('merchant adds an RTO pincode rule and switches it off', async ({ page }) =
   await page.getByRole('switch', { name: 'Pincodes on' }).click();
   await expect(page.getByText('Rule off')).toBeVisible();
 });
+
+test('merchant adds an upsell', async ({ page }) => {
+  await login(page);
+  await page.click('a:has-text("Upsell")');
+  await expect(page.getByText('Boxes with kurtis')).toBeVisible(); // the demo one
+  await page.click('[data-test=add-upsell]');
+  await page.locator('[data-test=upsell-editor] input[placeholder^="Search"]').last().click();
+  await page.getByRole('button', { name: /Saint Laurent/ }).click();
+  await page.locator('[data-test=upsell-editor] h3').click(); // close the list
+  await expect(page.locator('[data-test=upsell-summary]')).toHaveText('Any cart → 1 product, 10% off, 10 min timer');
+  await page.click('[data-test=save-upsell]');
+  await expect(page.locator('[data-test=upsell-row]')).toHaveCount(2);
+});

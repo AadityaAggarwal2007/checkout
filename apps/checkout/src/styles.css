@@ -90,3 +90,9 @@ p{margin:4px 0 12px}
 .done .tick{color:var(--accent);margin:6px 0}.done .totals{text-align:left;margin:12px 0}
 .ck-footer{display:flex;justify-content:center;gap:14px;padding:12px;color:var(--muted);font-size:12px}.secure{display:inline-flex;gap:4px;align-items:center}
 .dev-code{margin-top:12px;padding:8px 10px;border-radius:8px;background:#FEF3C7;color:#92400E;font-size:13px;text-align:center}
+
+.upsell h2{margin:0}.up-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.timer{font-size:12px;color:var(--red);background:#FEF2F2;border-radius:6px;padding:3px 8px;white-space:nowrap}.timer b{font-variant-numeric:tabular-nums}
+.up-item{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.up-price{display:flex;gap:6px;align-items:center;font-size:14px;margin-top:2px}.up-price s{color:var(--muted);font-size:12px}.up-price .save{margin:0}
+.up-variant{margin-top:3px;padding:3px 6px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;max-width:100%}

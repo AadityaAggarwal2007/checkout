@@ -195,6 +195,17 @@ export function checkoutRoutes(app: FastifyInstance): void {
     return send(reply, { state: await service.state(ctx.session, customer) });
   });
 
+  const upsellBody = z.object({ variantId: z.string().regex(/^\d{1,20}$/).optional(), lineId: z.string().max(40).optional() });
+  app.post('/checkout/api/upsell', limit(30), async (req, reply) => {
+    const ctx = await auth(req);
+    const customer = await needCustomer(ctx);
+    const body = upsellBody.safeParse(req.body);
+    if (!body.success || (!body.data.variantId && !body.data.lineId)) throw badRequest('Choose an item.');
+    if (body.data.variantId) await service.addUpsell(ctx.session, customer, body.data.variantId);
+    else await service.removeUpsell(ctx.session, body.data.lineId!);
+    return send(reply, { state: await service.state(ctx.session, customer) });
+  });
+
   const payBody = z.object({ method: z.enum(PAYMENT_METHODS), expectedTotal: z.number().int().min(0) });
   app.post('/checkout/api/pay', limit(20), async (req, reply) => {
     const ctx = await auth(req);

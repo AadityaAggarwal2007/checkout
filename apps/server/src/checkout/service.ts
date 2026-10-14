@@ -13,9 +13,10 @@ import { pepperedHash, randomToken, safeEqual } from '../lib/crypto.js';
 import { HttpError, badRequest, conflict, notFound } from '../lib/errors.js';
 import { createOrder, modeOf, pushOrderToShopify, type OrderDraft } from '../orders/create.js';
 import { shopperCard } from '../rules/coupons.js';
-import { buildCart } from './rules.js';
+import { buildCart, shopperOf } from './rules.js';
 import { couponStateOf, loadPricingContext, priceSession, type PricingContext, type SessionAddress, type SessionPricing } from './pricing.js';
 import { customerForDevice } from './otp.js';
+import { liveRules, offerOf, pickRule, upsellStateOf, UPSELL_PREFIX, withUpsellPrices, type UpsellState } from './upsell.js';
 
 export const SESSION_TTL_SECONDS = 24 * 3600;
 
@@ -152,6 +153,8 @@ export class CheckoutService {
     else step = 'payment';
 
     const giftInfo = p.gifts.length ? await this.deps.catalog.variants(session.storeId, p.gifts.map((g) => g.variantId)) : new Map();
+    const upsellState = upsellStateOf(session.upsell);
+    const upsell = step === 'payment' ? await this.upsellOffer(session, customer, upsellState, true) : null;
     return {
       id: session.id,
       step,
@@ -193,6 +196,7 @@ export class CheckoutService {
             discount: x?.discount ?? 0,
             total: x?.total ?? l.unitPrice * l.quantity,
             freeUnits: x?.freeUnits ?? 0,
+            ...(upsellState.lines[l.lineId] ? { upsell: true } : {}),
           };
         }),
         ...p.gifts.map((g) => ({
@@ -224,6 +228,7 @@ export class CheckoutService {
         visible: visible.map(shopperCard),
       },
       methods: priced.methods,
+      upsell: upsell?.offer ?? null,
       codReasons: p.codAvailability.reasons,
       unserviceable: p.unserviceable,
       payment:
@@ -334,7 +339,7 @@ export class CheckoutService {
     if (!address) throw badRequest('Choose a delivery address first.', 'no_address');
 
     const old = session.cart as unknown as Cart;
-    const { cart } = await buildCart(this.deps.catalog, session.storeId, old.lines, true);
+    const cart = withUpsellPrices((await buildCart(this.deps.catalog, session.storeId, old.lines, true)).cart, upsellStateOf(session.upsell));
     const ctx = await this.context(session, customer);
     const priced = await this.pricing(session, ctx, customer, cart);
     const result = priced.byMethod.get(method);
@@ -399,6 +404,64 @@ export class CheckoutService {
   }
 
   /** Shopper closed the gateway / pressed "Change payment method" while a payment was open. */
+  // ---------------------------------------------------------------- upsell
+
+  /** The offer this cart and shopper get now. markShown starts its timer the first time it is shown. */
+  private async upsellOffer(session: SessionWithStore, customer: Customer | null, state: UpsellState, markShown: boolean) {
+    const rows = await this.prisma.upsellRule.findMany({ where: { storeId: session.storeId, active: true }, select: { id: true, priority: true, rule: true } });
+    if (rows.length === 0) return null;
+    const cart = session.cart as unknown as Cart;
+    const now = Date.now();
+    const rule = pickRule(liveRules(rows), cart, shopperOf(customer), state, now);
+    if (!rule) return null;
+    const products = await this.deps.catalog.products(session.storeId, rule.rule.productIds);
+    let shownAt = state.shown[rule.id];
+    if (markShown && shownAt === undefined) {
+      const offer = offerOf(rule, products, cart, now);
+      if (!offer) return null;
+      shownAt = now;
+      state.shown[rule.id] = now;
+      await this.prisma.checkoutSession.update({ where: { id: session.id }, data: { upsell: state as unknown as Prisma.InputJsonValue } });
+      session.upsell = state as unknown as Prisma.JsonValue;
+    }
+    const offer = offerOf(rule, products, cart, shownAt);
+    return offer ? { rule, offer } : null;
+  }
+
+  /** "Add" on an offer: one unit, at the offer price, only while the offer is live for this cart. */
+  async addUpsell(session: SessionWithStore, customer: Customer, variantId: string): Promise<void> {
+    this.assertOpen(session);
+    if (session.status !== 'OPEN') throw conflict('A payment is in progress.', 'paying');
+    const state = upsellStateOf(session.upsell);
+    const live = await this.upsellOffer(session, customer, state, false);
+    const item = live?.offer.items.find((i) => i.variants.some((v) => v.variantId === variantId));
+    if (!live || !item || state.shown[live.rule.id] === undefined) throw badRequest('This offer has ended.', 'offer_ended');
+    const { cart: one } = await buildCart(this.deps.catalog, session.storeId, [{ variantId, quantity: 1 }], true);
+    if (!one.lines[0]) throw badRequest('This item is sold out.', 'sold_out');
+    const lineId = `${UPSELL_PREFIX}${variantId}`;
+    state.lines[lineId] = { ruleId: live.rule.id, percent: live.rule.rule.discountPercent };
+    const cart = session.cart as unknown as Cart;
+    const line = withUpsellPrices({ currency: 'INR', lines: [{ ...one.lines[0], lineId }] }, state).lines[0]!;
+    const next: Cart = { ...cart, lines: [...cart.lines.filter((l) => l.lineId !== lineId), line] };
+    await this.prisma.checkoutSession.update({ where: { id: session.id }, data: { cart: next as unknown as Prisma.InputJsonValue, upsell: state as unknown as Prisma.InputJsonValue } });
+    session.cart = next as unknown as Prisma.JsonValue;
+    session.upsell = state as unknown as Prisma.JsonValue;
+  }
+
+  /** Removes a line the shopper added from an offer (their own cart lines stay). */
+  async removeUpsell(session: SessionWithStore, lineId: string): Promise<void> {
+    this.assertOpen(session);
+    if (session.status !== 'OPEN') throw conflict('A payment is in progress.', 'paying');
+    const state = upsellStateOf(session.upsell);
+    if (!state.lines[lineId]) throw notFound('This item was not added from an offer.');
+    delete state.lines[lineId];
+    const cart = session.cart as unknown as Cart;
+    const next: Cart = { ...cart, lines: cart.lines.filter((l) => l.lineId !== lineId) };
+    await this.prisma.checkoutSession.update({ where: { id: session.id }, data: { cart: next as unknown as Prisma.InputJsonValue, upsell: state as unknown as Prisma.InputJsonValue } });
+    session.cart = next as unknown as Prisma.JsonValue;
+    session.upsell = state as unknown as Prisma.JsonValue;
+  }
+
   async cancelPending(session: SessionWithStore): Promise<void> {
     if (session.completedAt) return;
     await this.prisma.checkoutSession.update({ where: { id: session.id }, data: { status: 'OPEN', step: 'PAYMENT' } });

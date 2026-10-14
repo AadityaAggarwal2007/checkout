@@ -25,6 +25,8 @@ export interface Ui {
   couponOpen: boolean;
   summaryOpen: boolean;
   confirmCod?: CheckoutMethod;
+  /** Upsell: the option picked per offered product. */
+  upsellVariant: Record<string, string>;
   /** Gateway URL of the open payment (desktop: "Reopen payment page"). */
   payUrl?: string;
   busy?: string;
@@ -33,7 +35,7 @@ export interface Ui {
 
 export class App {
   state!: CheckoutState;
-  readonly ui: Ui = { phone: '', resendAt: 0, code: '', addressForm: false, form: { tag: 'HOME' }, couponInput: '', couponOpen: false, summaryOpen: false };
+  readonly ui: Ui = { phone: '', resendAt: 0, code: '', addressForm: false, form: { tag: 'HOME' }, couponInput: '', couponOpen: false, summaryOpen: false, upsellVariant: {} };
   readonly api: Api;
   private poll?: number;
   private gatewayWindow: Window | null = null;

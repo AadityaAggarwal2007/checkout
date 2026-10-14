@@ -13,7 +13,7 @@ const NAV: Array<{ href: string; label: string; icon: string; soon?: string }> =
   { href: '/checkout-design', label: 'Checkout design', icon: '✎', soon: 'Phase 4' },
   { href: '/coupons', label: 'Coupons', icon: '%' },
   { href: '/payment-offers', label: 'Payment offers', icon: '₹' },
-  { href: '/upsell', label: 'Upsell', icon: '↗', soon: 'Phase 4' },
+  { href: '/upsell', label: 'Upsell', icon: '↗' },
   { href: '/shipping', label: 'Shipping', icon: '⛟' },
   { href: '/rto', label: 'RTO suite', icon: '⛨' },
   { href: '/settings', label: 'Settings · Payments', icon: '⚙' },

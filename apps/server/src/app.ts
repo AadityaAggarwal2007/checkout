@@ -12,6 +12,7 @@ import { healthRoutes } from './routes/health.js';
 import { orderRoutes } from './routes/orders.js';
 import { paymentRoutes } from './routes/payments.js';
 import { rtoRoutes } from './routes/rto.js';
+import { upsellRoutes } from './routes/upsell.js';
 import { shippingRoutes } from './routes/shipping.js';
 import { shopifyRoutes } from './routes/shopify.js';
 import { storeRoutes } from './routes/stores.js';
@@ -83,6 +84,7 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   couponRoutes(app);
   shippingRoutes(app);
   rtoRoutes(app);
+  upsellRoutes(app);
   orderRoutes(app);
   storefrontRoutes(app);
   checkoutRoutes(app);

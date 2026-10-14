@@ -136,3 +136,24 @@ test('the merchant sees the orders and the payment settings', async ({ page }) =
   await page.click('a:has-text("Shipping")');
   await expect(page.locator('input[value="Standard"]')).toBeVisible();
 });
+
+test('upsell: the kurti checkout offers a jewellery box with a timer; adding it changes the total', async ({ page }) => {
+  await page.goto(`${STORE}/products/cotton-straight-kurti`);
+  await page.waitForFunction(() => 'CheckoutDrawer' in window);
+  await page.click('button[name=add]');
+  await page.locator('#ck-cart-drawer .ck-cta').click();
+  const f = page.frameLocator('#ck-checkout iframe');
+  await login(page, f, newPhone());
+  await address(f);
+  await expect(f.locator('[data-test=upsell]')).toContainText('Add a jewellery box');
+  await expect(f.locator('[data-test=upsell-timer]')).toHaveText(/^(10:00|09:5\d)$/);
+  const before = await f.locator('[data-test=summary-total]').textContent();
+  await f.locator('[data-test=upsell-add-2031]').click();
+  await expect(f.locator('[data-test=summary-total]')).not.toHaveText(before!);
+  await f.locator('[data-test=summary-toggle]').click();
+  await expect(f.getByText('White jewellery box')).toBeVisible();
+  await expect(f.locator('[data-test=upsell-remove]')).toBeVisible();
+  await f.locator('[data-test=method-cod]').click();
+  await f.locator('[data-test=confirm-cod]').click();
+  await expect(f.locator('[data-test=thank-you]')).toBeVisible();
+});
