@@ -86,7 +86,7 @@ server syntax + `prisma generate` OK):
 2. **Billing of merchants:** a **percentage of every successful order**. Needs: per-store rate, a usage ledger per
    order, "Outstanding payable" like FlexyPe's card, invoices later.
 3. **Gateways in the first version:** **PayGlocal and PayU** (others later through the same gateway interface).
-4. **Login OTP:** **no OTP for now.** Consequence (Claude): without OTP the server must NOT return saved addresses
+4. **Login OTP:** ~~no OTP for now~~ — CHANGED, see decision 4 below (WhatsApp OTP, required before going live). Consequence (Claude): without OTP the server must NOT return saved addresses
    for a typed phone number (today's leak). Saved address can only come from the same shopper's own browser
    (remembered on that device). "One-Click Checkout" across devices waits for OTP.
 5. **One place for the merchant** (owner 2026-10-14): OUR dashboard holds everything (cart drawer AND checkout:
@@ -111,6 +111,14 @@ server syntax + `prisma generate` OK):
    customer's phone number. OPEN: how to do this without the privacy leak (problem 2). Claude's position: a phone number
    alone must never show someone's address; it needs a check that the shopper owns the number (OTP by WhatsApp / SMS, or
    masked address until verified). Waiting for the video and the owner's call.
+
+4. **OTP on WhatsApp, required before going live** (owner 2026-10-14: "otp daldenge bhai, uska bina live nai karanga,
+   whatsapp pa bhejde bass"). Flow: shopper types the phone → a 4-6 digit OTP goes by WhatsApp (Cloud API template) →
+   only after the right OTP the saved addresses / name / email of THAT phone appear (one-click checkout). Never any
+   address, name or email for an unverified number. Limits on sends and wrong tries per phone and per IP; the code
+   expires in a few minutes; it is stored hashed. The verified device is remembered (signed cookie) so a returning shopper
+   on the same phone skips the OTP, like FlexyPe's "Not you?". Needs: a WhatsApp Business number + an approved
+   authentication template (Meta), env vars for the token / phone ID / template. Problem 2 is closed by this.
 
 ## Design rules decided while reading FlexyPe (keep when building)
 
