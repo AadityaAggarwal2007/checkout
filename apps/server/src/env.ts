@@ -15,6 +15,11 @@ const schema = z.object({
   SHOPIFY_API_SECRET: z.string().default(''),
   SHOPIFY_SCOPES: z.string().default('read_products,write_orders,read_orders'),
   SHOPIFY_API_VERSION: z.string().default('2025-01'),
+  /** 'shopify' = real stores; 'dev' = products from DEV_CATALOG_FILE (local test store). */
+  CATALOG: z.enum(['shopify', 'dev']).default('shopify'),
+  DEV_CATALOG_FILE: z.string().default('../devstore/catalog.json'),
+  /** Where the checkout page is served (iframe). Defaults to PUBLIC_URL. */
+  CHECKOUT_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof schema>;

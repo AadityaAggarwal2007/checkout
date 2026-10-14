@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { randomToken, safeEqual } from '../lib/crypto.js';
 import { badRequest, unauthorized } from '../lib/errors.js';
 import { normaliseShop, verifyQueryHmac, verifyWebhookHmac } from '../lib/shopify.js';
+import { ensureStoreDefaults } from '../rules/defaults.js';
 import { SESSION_COOKIE } from '../plugins/auth.js';
 
 const OAUTH_COOKIE = 'ck_oauth';
@@ -51,7 +52,7 @@ export function shopifyRoutes(app: FastifyInstance): void {
     const store = await prisma.$transaction(async (tx) => {
       const s = await tx.store.upsert({
         where: { shopDomain: shop },
-        create: { shopDomain: shop, name: info.name, domain: info.domain, currency: info.currency, settings: { create: {} } },
+        create: { shopDomain: shop, name: info.name, domain: info.domain, currency: info.currency },
         update: { name: info.name, domain: info.domain, status: 'ACTIVE' },
       });
       await tx.shopifyConnection.upsert({
@@ -59,6 +60,7 @@ export function shopifyRoutes(app: FastifyInstance): void {
         create: { storeId: s.id, accessTokenEnc, scopes: scope },
         update: { accessTokenEnc, scopes: scope, uninstalledAt: null, installedAt: new Date() },
       });
+      await ensureStoreDefaults(tx, s.id);
       return s;
     });
 

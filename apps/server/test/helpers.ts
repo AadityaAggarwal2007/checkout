@@ -1,7 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
+import { fileURLToPath } from 'node:url';
 import { buildApp } from '../src/app.js';
+import { DevCatalog } from '../src/catalog/dev.js';
 import type { Deps } from '../src/context.js';
 import { loadEnv } from '../src/env.js';
 import { Keyring } from '../src/lib/crypto.js';
@@ -37,6 +39,8 @@ export const fakeShopify: ShopifyApi & { calls: string[] } = {
   },
 };
 
+export const devCatalog = new DevCatalog(fileURLToPath(new URL('../../devstore/catalog.json', import.meta.url)));
+
 export async function makeApp(overrides: Partial<Deps> = {}): Promise<FastifyInstance> {
   return buildApp({
     env,
@@ -44,6 +48,7 @@ export async function makeApp(overrides: Partial<Deps> = {}): Promise<FastifyIns
     keyring: new Keyring(env.ENCRYPTION_KEYS),
     tokens: new Tokens(env.JWT_SECRET),
     shopify: fakeShopify,
+    catalog: devCatalog,
     ...overrides,
   });
 }

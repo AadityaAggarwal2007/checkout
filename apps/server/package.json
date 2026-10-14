@@ -11,10 +11,12 @@
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate deploy",
-    "db:sql": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script"
+    "db:sql": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
+    "seed:dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {
     "@checkout/core": "*",
+    "@checkout/shared": "*",
     "@fastify/cookie": "9.4.0",
     "@fastify/cors": "9.0.1",
     "@fastify/rate-limit": "9.1.0",

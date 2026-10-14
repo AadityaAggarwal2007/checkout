@@ -1,0 +1,321 @@
+{
+ "_note": "Local test store catalog. Prices in paise. Shared by apps/devstore and the server when CATALOG=dev.",
+ "products": [
+  {
+   "productId": "1001",
+   "title": "16 PCS Oxidised Jhumkas + Red Cream Box",
+   "handle": "16-pcs-oxidised-jhumkas-red-cream-box",
+   "image": "/img/1001.svg",
+   "collectionIds": [
+    "9001"
+   ],
+   "variants": [
+    {
+     "variantId": "2001",
+     "productId": "1001",
+     "productTitle": "16 PCS Oxidised Jhumkas + Red Cream Box",
+     "title": "Silver / pack-of-3",
+     "image": "/img/1001.svg",
+     "price": 12400,
+     "compareAtPrice": 59900,
+     "collectionIds": [
+      "9001"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2001"
+    },
+    {
+     "variantId": "2002",
+     "productId": "1001",
+     "productTitle": "16 PCS Oxidised Jhumkas + Red Cream Box",
+     "title": "Gold / pack-of-3",
+     "image": "/img/1001.svg",
+     "price": 12400,
+     "compareAtPrice": 59900,
+     "collectionIds": [
+      "9001"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2002"
+    },
+    {
+     "variantId": "2003",
+     "productId": "1001",
+     "productTitle": "16 PCS Oxidised Jhumkas + Red Cream Box",
+     "title": "Silver / pack-of-6",
+     "image": "/img/1001.svg",
+     "price": 22400,
+     "compareAtPrice": 99900,
+     "collectionIds": [
+      "9001"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2003"
+    },
+    {
+     "variantId": "2004",
+     "productId": "1001",
+     "productTitle": "16 PCS Oxidised Jhumkas + Red Cream Box",
+     "title": "Gold / pack-of-6",
+     "image": "/img/1001.svg",
+     "price": 22400,
+     "compareAtPrice": 99900,
+     "collectionIds": [
+      "9001"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2004"
+    }
+   ]
+  },
+  {
+   "productId": "1002",
+   "title": "Set of 7 Oxidised Earrings Combo",
+   "handle": "set-of-7-oxidised-earrings-combo",
+   "image": "/img/1002.svg",
+   "collectionIds": [
+    "9001"
+   ],
+   "variants": [
+    {
+     "variantId": "2011",
+     "productId": "1002",
+     "productTitle": "Set of 7 Oxidised Earrings Combo",
+     "title": "silver / style-1",
+     "image": "/img/1002.svg",
+     "price": 11600,
+     "collectionIds": [
+      "9001"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2011"
+    },
+    {
+     "variantId": "2012",
+     "productId": "1002",
+     "productTitle": "Set of 7 Oxidised Earrings Combo",
+     "title": "silver / style-2",
+     "image": "/img/1002.svg",
+     "price": 11600,
+     "collectionIds": [
+      "9001"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2012"
+    }
+   ]
+  },
+  {
+   "productId": "1003",
+   "title": "Cotton Straight Kurti",
+   "handle": "cotton-straight-kurti",
+   "image": "/img/1003.svg",
+   "collectionIds": [
+    "9002"
+   ],
+   "variants": [
+    {
+     "variantId": "2021",
+     "productId": "1003",
+     "productTitle": "Cotton Straight Kurti",
+     "title": "S",
+     "image": "/img/1003.svg",
+     "price": 49900,
+     "compareAtPrice": 129900,
+     "collectionIds": [
+      "9002"
+     ],
+     "weightGrams": 250,
+     "available": true,
+     "sku": "SKU-2021"
+    },
+    {
+     "variantId": "2022",
+     "productId": "1003",
+     "productTitle": "Cotton Straight Kurti",
+     "title": "M",
+     "image": "/img/1003.svg",
+     "price": 49900,
+     "compareAtPrice": 129900,
+     "collectionIds": [
+      "9002"
+     ],
+     "weightGrams": 250,
+     "available": true,
+     "sku": "SKU-2022"
+    },
+    {
+     "variantId": "2023",
+     "productId": "1003",
+     "productTitle": "Cotton Straight Kurti",
+     "title": "L",
+     "image": "/img/1003.svg",
+     "price": 49900,
+     "compareAtPrice": 129900,
+     "collectionIds": [
+      "9002"
+     ],
+     "weightGrams": 250,
+     "available": true,
+     "sku": "SKU-2023"
+    }
+   ]
+  },
+  {
+   "productId": "1004",
+   "title": "White jewellery box",
+   "handle": "white-jewellery-box",
+   "image": "/img/1004.svg",
+   "collectionIds": [
+    "9003"
+   ],
+   "variants": [
+    {
+     "variantId": "2031",
+     "productId": "1004",
+     "productTitle": "White jewellery box",
+     "title": "Default Title",
+     "image": "/img/1004.svg",
+     "price": 7900,
+     "collectionIds": [
+      "9003"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2031"
+    }
+   ]
+  },
+  {
+   "productId": "1005",
+   "title": "Pink jewellery box",
+   "handle": "pink-jewellery-box",
+   "image": "/img/1005.svg",
+   "collectionIds": [
+    "9003"
+   ],
+   "variants": [
+    {
+     "variantId": "2041",
+     "productId": "1005",
+     "productTitle": "Pink jewellery box",
+     "title": "Default Title",
+     "image": "/img/1005.svg",
+     "price": 5900,
+     "collectionIds": [
+      "9003"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2041"
+    }
+   ]
+  },
+  {
+   "productId": "1006",
+   "title": "Forever Love Platinum Couple Rings",
+   "handle": "forever-love-couple-rings",
+   "image": "/img/1006.svg",
+   "collectionIds": [
+    "9003"
+   ],
+   "variants": [
+    {
+     "variantId": "2051",
+     "productId": "1006",
+     "productTitle": "Forever Love Platinum Couple Rings",
+     "title": "Default Title",
+     "image": "/img/1006.svg",
+     "price": 9900,
+     "collectionIds": [
+      "9003"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2051"
+    }
+   ]
+  },
+  {
+   "productId": "1007",
+   "title": "Saint Laurent For Womens",
+   "handle": "gift-heels",
+   "image": "/img/1007.svg",
+   "collectionIds": [
+    "9004"
+   ],
+   "variants": [
+    {
+     "variantId": "2061",
+     "productId": "1007",
+     "productTitle": "Saint Laurent For Womens",
+     "title": "Default Title",
+     "image": "/img/1007.svg",
+     "price": 49900,
+     "collectionIds": [
+      "9004"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2061"
+    }
+   ]
+  },
+  {
+   "productId": "1008",
+   "title": "Large Apfra Quilted Shoulder Bag",
+   "handle": "gift-bag",
+   "image": "/img/1008.svg",
+   "collectionIds": [
+    "9004"
+   ],
+   "variants": [
+    {
+     "variantId": "2071",
+     "productId": "1008",
+     "productTitle": "Large Apfra Quilted Shoulder Bag",
+     "title": "Default Title",
+     "image": "/img/1008.svg",
+     "price": 39900,
+     "collectionIds": [
+      "9004"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2071"
+    }
+   ]
+  },
+  {
+   "productId": "1009",
+   "title": "Men Set of 4 Eau De Parfum 20 ml",
+   "handle": "gift-perfume",
+   "image": "/img/1009.svg",
+   "collectionIds": [
+    "9004"
+   ],
+   "variants": [
+    {
+     "variantId": "2081",
+     "productId": "1009",
+     "productTitle": "Men Set of 4 Eau De Parfum 20 ml",
+     "title": "Default Title",
+     "image": "/img/1009.svg",
+     "price": 4900,
+     "collectionIds": [
+      "9004"
+     ],
+     "weightGrams": 150,
+     "available": true,
+     "sku": "SKU-2081"
+    }
+   ]
+  }
+ ]
+}

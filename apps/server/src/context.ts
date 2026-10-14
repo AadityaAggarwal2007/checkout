@@ -1,4 +1,5 @@
 import type { PrismaClient, StoreMember, User } from '@prisma/client';
+import type { Catalog } from './catalog/types.js';
 import type { Env } from './env.js';
 import type { Keyring } from './lib/crypto.js';
 import type { ShopifyApi } from './lib/shopify.js';
@@ -11,6 +12,7 @@ export interface Deps {
   keyring: Keyring;
   tokens: Tokens;
   shopify: ShopifyApi;
+  catalog: Catalog;
 }
 
 declare module 'fastify' {

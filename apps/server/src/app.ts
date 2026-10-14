@@ -5,9 +5,11 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Deps } from './context.js';
 import { HttpError } from './lib/errors.js';
 import { authRoutes } from './routes/auth.js';
+import { drawerRoutes } from './routes/drawers.js';
 import { healthRoutes } from './routes/health.js';
 import { shopifyRoutes } from './routes/shopify.js';
 import { storeRoutes } from './routes/stores.js';
+import { storefrontRoutes } from './routes/storefront.js';
 
 export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Promise<FastifyInstance> {
   const app = Fastify({
@@ -31,15 +33,19 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   await app.register(cookie);
   await app.register(rateLimit, { global: false });
   // Dashboard API: only the dashboard origin, with cookies.
+  // Dashboard API: only the dashboard origin, with cookies. /storefront/* sets its own open CORS.
   await app.register(cors, {
-    origin: (origin, cb) => cb(null, !origin || origin === deps.env.DASHBOARD_URL),
-    credentials: true,
+    delegator: (req, cb) => {
+      if (req.url?.startsWith('/storefront/')) return cb(null, { origin: false });
+      cb(null, { origin: (origin, done) => done(null, !origin || origin === deps.env.DASHBOARD_URL), credentials: true });
+    },
   });
 
-  // Cross-site requests cannot send JSON without a CORS preflight, so requiring JSON on
-  // every state-changing /api call blocks CSRF from forms.
+  // CSRF: a form on another site can only send a simple POST. Requiring JSON on POST / PUT /
+  // PATCH forces a CORS preflight, which only the dashboard origin passes. DELETE (no body)
+  // is never a simple request, so the browser already preflights it.
   app.addHook('preHandler', async (req) => {
-    if (req.url.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    if (req.url.startsWith('/api/') && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
       const type = String(req.headers['content-type'] ?? '');
       if (!type.startsWith('application/json')) throw new HttpError(415, 'json_only', 'Send JSON.');
     }
@@ -57,5 +63,7 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   authRoutes(app);
   storeRoutes(app);
   shopifyRoutes(app);
+  drawerRoutes(app);
+  storefrontRoutes(app);
   return app;
 }
