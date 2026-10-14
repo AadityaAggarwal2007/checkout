@@ -129,7 +129,9 @@ export function checkoutRoutes(app: FastifyInstance): void {
     if (!phone) throw badRequest('Enter a valid 10-digit mobile number.', 'invalid_phone');
     const out = await sendOtp(app.deps, ctx.session.storeId, phone, req.ip);
     await prisma.checkoutSession.update({ where: { id: ctx.session.id }, data: { step: ctx.session.step === 'CART' ? 'LOGIN' : undefined } });
-    return send(reply, { challengeId: out.challengeId, resendInMs: out.resendInMs, phone: maskPhone(phone) });
+    // Local trial without WhatsApp (OTP_SENDER=dev, never in production): the page shows the code.
+    const devCode = app.deps.otp instanceof DevOtpSender && env.NODE_ENV !== 'production' ? app.deps.otp.outbox.get(phone) : undefined;
+    return send(reply, { challengeId: out.challengeId, resendInMs: out.resendInMs, phone: maskPhone(phone), devCode });
   });
 
   const verifyBody = z.object({ challengeId: z.string().uuid(), phone: z.string().max(20), code: z.string().trim().max(10) });

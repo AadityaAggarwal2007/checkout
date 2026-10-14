@@ -1,0 +1,15 @@
+{
+  "name": "Checkout — trial in the browser",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
+  "features": { "ghcr.io/devcontainers/features/github-cli:1": {} },
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
+  "forwardPorts": [5004, 5003, 5002],
+  "portsAttributes": {
+    "5004": { "label": "Store (try the checkout here)", "onAutoForward": "openBrowser" },
+    "5003": { "label": "Dashboard", "onAutoForward": "notify" },
+    "5002": { "label": "API (checkout page)", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "bash scripts/codespace-setup.sh",
+  "postAttachCommand": "bash scripts/codespace-start.sh",
+  "customizations": { "codespaces": { "openFiles": ["docs/TRY.md"] } }
+}

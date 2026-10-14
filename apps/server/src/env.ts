@@ -39,6 +39,8 @@ const schema = z.object({
   /** Where orders go: 'shopify' = Admin API of the store; 'dev' = the local test store (DEV_STORE_URL). */
   ORDER_SINK: z.enum(['shopify', 'dev']).default('shopify'),
   DEV_STORE_URL: z.string().url().default('http://localhost:5004'),
+  /** How this server reaches the local test store when the browser uses another address (Codespaces). */
+  DEV_STORE_INTERNAL_URL: z.string().url().optional(),
   /** Pincode -> city / state: 'india_post' (api.postalpincode.in), 'dev' (a few built-in pincodes), 'off'. */
   PINCODE_LOOKUP: z.enum(['india_post', 'dev', 'off']).default('india_post'),
 }).superRefine((e, ctx) => {

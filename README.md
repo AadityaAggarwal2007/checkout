@@ -20,6 +20,10 @@ Cart drawer + one-page checkout for Shopify stores (multi-store SaaS). Read `CLA
 | `e2e` | Playwright tests: real server + local store + dashboard in Chromium. |
 | `server/`, `dashboard/`, `widget-src/` | The old ShopDrawer code, kept until the new apps replace it. |
 
+## Try it in the browser
+
+GitHub Codespaces runs everything with demo data: see `docs/TRY.md`.
+
 ## Run locally (no Shopify needed)
 
 ```bash

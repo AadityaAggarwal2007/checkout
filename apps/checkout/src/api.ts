@@ -52,7 +52,7 @@ export function api(token: string) {
   type S = { state: CheckoutState };
   return {
     session: () => call<S>('GET', '/checkout/api/session'),
-    sendOtp: (phone: string) => call<{ challengeId: string; resendInMs: number; phone: string }>('POST', '/checkout/api/otp/send', { phone }),
+    sendOtp: (phone: string) => call<{ challengeId: string; resendInMs: number; phone: string; devCode?: string }>('POST', '/checkout/api/otp/send', { phone }),
     verifyOtp: (challengeId: string, phone: string, code: string) => call<S & { deviceToken: string }>('POST', '/checkout/api/otp/verify', { challengeId, phone, code }),
     logout: () => call<S>('POST', '/checkout/api/logout', {}),
     chooseAddress: (body: { addressId?: string; address?: unknown }) => call<S>('POST', '/checkout/api/address', body),

@@ -21,6 +21,7 @@ function phoneView(app: App): HTMLElement {
       const res = await app.api.sendOtp(phone);
       app.ui.challengeId = res.challengeId;
       app.ui.maskedPhone = res.phone;
+      app.ui.devCode = res.devCode;
       app.ui.resendAt = Date.now() + res.resendInMs;
       app.ui.code = '';
     });
@@ -86,6 +87,7 @@ function codeView(app: App): HTMLElement {
       app.ui.challengeId = res.challengeId;
       app.ui.resendAt = Date.now() + res.resendInMs;
       app.ui.code = '';
+      app.ui.devCode = res.devCode;
       app.ui.notice = { kind: 'info', text: 'A new code is on its way.' };
     }),
   );
@@ -122,5 +124,6 @@ function codeView(app: App): HTMLElement {
     }),
     h('button', { class: 'btn', type: 'submit', disabled: app.ui.busy === 'verify', 'data-test': 'verify-otp' }, app.ui.busy === 'verify' ? 'Checking…' : 'Verify'),
     h('div', { class: 'center' }, timer),
+    app.ui.devCode ? h('p', { class: 'dev-code', 'data-test': 'dev-code' }, `Test mode (no WhatsApp yet): your code is ${app.ui.devCode}`) : null,
   );
 }

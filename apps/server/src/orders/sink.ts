@@ -129,5 +129,5 @@ export class DevOrderSink implements OrderSink {
 }
 
 export function orderSinkFrom(env: Env, prisma: PrismaClient, keyring: Keyring): OrderSink {
-  return env.ORDER_SINK === 'dev' ? new DevOrderSink(env.DEV_STORE_URL) : new ShopifyOrderSink(prisma, keyring, env.SHOPIFY_API_VERSION);
+  return env.ORDER_SINK === 'dev' ? new DevOrderSink(env.DEV_STORE_INTERNAL_URL ?? env.DEV_STORE_URL) : new ShopifyOrderSink(prisma, keyring, env.SHOPIFY_API_VERSION);
 }

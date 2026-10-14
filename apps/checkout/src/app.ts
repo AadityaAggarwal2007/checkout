@@ -14,6 +14,8 @@ export interface Ui {
   phone: string;
   challengeId?: string;
   maskedPhone?: string;
+  /** Local trial only: the code the dev sender "sent". */
+  devCode?: string;
   resendAt: number;
   code: string;
   addressForm: boolean;

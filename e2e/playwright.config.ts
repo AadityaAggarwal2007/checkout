@@ -17,6 +17,7 @@ const serverEnv = {
   CATALOG: 'dev',
   DEV_CATALOG_FILE: '../devstore/catalog.json',
   DEV_STORE_URL: 'http://localhost:5104',
+  DEV_STORE_INTERNAL_URL: 'http://localhost:5104',
   STOREFRONT_DIST: '../storefront/dist/loader.js',
   CHECKOUT_DIST: '../checkout/dist',
   OTP_SENDER: 'dev',

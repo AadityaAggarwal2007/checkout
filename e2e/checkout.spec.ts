@@ -31,6 +31,7 @@ async function login(page: Page, f: FrameLocator, phone: string): Promise<void> 
   await f.locator('[data-test=send-otp]').click();
   await expect(f.locator('[data-test=otp]')).toBeVisible();
   const { code } = await (await page.request.get(`${API}/checkout/dev/otp?phone=${phone}`)).json();
+  await expect(f.locator('[data-test=dev-code]')).toContainText(code); // trial mode shows the code
   await f.locator('[data-test=otp]').fill(code); // 6 digits submit by themselves
 }
 

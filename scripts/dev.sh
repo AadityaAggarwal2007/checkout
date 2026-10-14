@@ -10,7 +10,7 @@ trap 'kill 0' EXIT
 (cd apps/storefront && npm run watch) &
 (cd apps/checkout && npm run watch) &
 (cd apps/server && npm run dev) &
-(cd apps/devstore && npm run dev) &
+(cd apps/devstore && API_URL="${STORE_API_URL:-http://localhost:5002}" npm run dev) &
 (cd apps/dashboard && npm run dev) &
 sleep 4
 echo
