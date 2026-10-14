@@ -80,6 +80,16 @@ server syntax + `prisma generate` OK):
 - Phase 4 funnel analytics + abandoned checkout (WhatsApp).
 - Phase 5 SaaS: merchant signup, Shopify app, plans / billing.
 
+## Owner's answers after the dashboard screenshots (2026-10-14)
+
+1. **Brand name:** decide later. Keep it a setting / placeholder ("Powered by ___"), never hard-coded.
+2. **Billing of merchants:** a **percentage of every successful order**. Needs: per-store rate, a usage ledger per
+   order, "Outstanding payable" like FlexyPe's card, invoices later.
+3. **Gateways in the first version:** **PayGlocal and PayU** (others later through the same gateway interface).
+4. **Login OTP:** **no OTP for now.** Consequence (Claude): without OTP the server must NOT return saved addresses
+   for a typed phone number (today's leak). Saved address can only come from the same shopper's own browser
+   (remembered on that device). "One-Click Checkout" across devices waits for OTP.
+
 ## Open questions (asked 2026-10-14, not answered yet)
 
 1. First test store before outside merchants (e.g. one of our own)?
