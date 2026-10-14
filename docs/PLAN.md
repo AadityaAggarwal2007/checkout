@@ -351,7 +351,74 @@ STILL NOT CAPTURED (low priority): an abandoned checkout's detail, notifications
 
 ### (b) Add to cart / cart drawer setup
 
-_(later)_
+Source: 20 screenshots (2026-10-14 12:26-12:28) of FlexyCart inside the kurtiya Shopify admin. Structure only.
+
+**Big ideas**
+- The cart drawer is set up from a **Shopify embedded app** ("FlexyCart by FlexyPe", unlisted: installed by link, not
+  in the App Store search) and switched on with a **theme app embed** (one toggle in the theme editor, no code paste);
+  the embed has one setting: the theme's cart-count class, so the theme's own badge stays right.
+- Drawer editor = section list | settings | live drawer preview. Sections: Announcements, Reward Bar, Upsells, Add-ons,
+  Additional Notes, Confirmation Text, Discount Codes, Trust Badges, Free Gifts, Settings, colour palette. Several
+  drawers per store, one active.
+- Free gifts (and coupons) in the cart come from the SAME rules as the checkout ("Manage in FlexyPe").
+- Our current ShopDrawer already has almost the same section list; the gaps are: Shopify app + theme embed install,
+  several drawers, trust-badge logo library, one shared rules engine with the checkout, live preview with real products.
+
+**Screen by screen**
+
+```text
+C01 FLEXYCART = a SHOPIFY EMBEDDED APP (inside Shopify admin: Apps > FlexyCart > "Drawers"; not on dashboard.flexype.io).
+   Drawers list: "Default" drawer (thumbnail, Active chip, added / last saved dates, "..." menu, Customize); "Preview",
+   "+ Create" (several drawers per store, one active). Card "Enable FlexyCart for your store" + "Enable FlexyCart" button.
+C02 Installed through a THEME APP EMBED (Theme editor > App embeds > FlexyCart toggle; toast "FlexyCart activated").
+   Embed setting "Selectors > Cart Count Classname" (e.g. cart-count-bubble) so the theme's own cart count updates;
+   "Manage app" link. (= Shopify Theme App Extension; no manual <script> paste.)
+C03 DRAWER EDITOR (3 columns: section list | settings | LIVE drawer preview with sample products). Sections, each with an
+   Active chip: Announcements, Reward Bar, Upsells, Add-ons, Additional Notes, Confirmation Text, Discount Codes,
+   Trust Badges, Free Gifts, Settings. COLOR PALETTE: Primary color, Text color.
+   ANNOUNCEMENTS: Enable toggle; Mode "Rotating Messages" (or static); messages list (50 chars each, emoji ok, delete,
+   "Add Message"); Display duration (seconds).
+   PREVIEW shows the drawer: "Your cart (3)" + close; announcement strip; reward bar; ORDER SUMMARY items (image, qty badge,
+   title, compare-at struck, price, "10% Off", − qty +, delete); Coupons row + "You saved ₹x on this order 🎉"; Products
+   you may like; "I accept the terms and conditions" checkbox; total "₹x · Estimated total"; big "⚡ Checkout" button;
+   payment icons row (UPI apps, Mastercard, Paytm, PhonePe); "Secured by FlexyPe".
+C04 REWARD BAR: Enable; Template "With Icon"; Counting method "Total Value" (or quantity); Enable confetti; REWARD TIERS list
+   (name, type e.g. Shipping / gift, threshold ₹; edit/delete; "Add Tier"). Preview: "Congrats! You achieved this tier",
+   track with milestone icons and labels.
+C05 UPSELLS: Enable; Title (30 chars, "Products you may like"); Mode Manual (or auto); Type Products; Select products (search,
+   Browse, list with price, remove); "Limit number of upsells" + Maximum upsells to show (10). Preview: horizontal cards
+   with image, title, price, "Add" button.
+C06 Upsells cont. (same as C05).
+C07 ADD-ONS: Enable toggle (off on kurtiya); "Add-on Rules" list + "Add Rule"; empty state "No add-on rules configured —
+   add rules to offer product add-ons" (rule form not captured; current ShopDrawer has trigger product → add-on product + price).
+C08 ADDITIONAL NOTES: Enable; Position Body (or footer); Title (30, "Add instructions"); Placeholder (30, "Add note here...");
+   Limit character count + Maximum length (300). Preview: link "✎ Add instructions" that opens a textarea.
+C09 CONFIRMATION TEXT: Enable; Content (100, "I accept the terms and conditions"); Enable checkbox; Required checkbox.
+C10 DISCOUNT CODES (in the cart): Enable; Mode "Input Field" (or list); Position Body; Input placeholder (30); Apply button text
+   (10); Messages: Invalid code message, Applied message; Confetti: Enable confetti. Preview: "Coupons ›" row and
+   "You saved ₹x on this order 🎉" (savings = compare-at + discounts).
+C11-12 TRUST BADGES: a big grid of payment / wallet / card logos (~70: Airtel, Amazon Pay, BHIM-style UPI, Cashfree, CCAvenue,
+   Easebuzz, GPay, Paytm, PayU, PhonePe, Razorpay, Snapmint, Mastercard, Visa, Amex, Apple Pay, PayPal, Stripe, COD,
+   Cash on pick up, ...); tick the ones to show; chosen ones appear as the logo row under the Checkout button.
+C13 FREE GIFTS in the cart editor: "Manage in FlexyPe" — when FlexyPe checkout is used, free gifts are configured in the
+   FlexyPe dashboard (= the "Exclusive Free Gift" coupon type). Feature list: triggers on cart total / quantity / specific
+   products; multiple gift tiers; confetti on unlock; smart add/remove/display; max gifts per cart.
+   => ONE rules engine (coupons) feeds both the cart drawer and the checkout.
+C14 SETTINGS (drawer): DISPLAY — Pricing: Show compare-at price, Show savings; Products: Show variant selector, Show
+   properties; Cart: Open drawer on add to cart. EMPTY CART STATE: Title (30), Description (50), Button text (25),
+   Button URL (/collections/all).
+C15 COLOR PALETTE picker: colour square + hue slider + Hex field.
+C16 Colour picker for Text colour (same control).
+C17 App "..." menu (Shopify admin): Manage app, Get support, Pin to your navigation, Uninstall.
+C18-20 SHOPIFY SETTINGS > APPS > FlexyCart "by FlexyPe": installed 1 week ago; yellow note "This app is NOT listed in the Shopify
+   App Store. Contact the app developer for support" (= UNLISTED app, installed by link); "A quick cart drawer that lets
+   shoppers edit items and variants". Billing card "No plan selected" (they charge outside Shopify billing). Extensions
+   "1 active — Available for Online Store" (the theme app embed). ACCESS (view + edit): Customers, Custom data (metafields),
+   Discounts, Marketing, Online Store, Orders, Products. Privacy: reads device & activity data (geolocation, IP, browser,
+   browsing behaviour, client ID cookie). App history: installed 3 Oct by the store. Uninstall app.
+   => FlexyPe = TWO surfaces: (1) Shopify embedded app "FlexyCart" for the cart drawer + install; (2) its own web
+   dashboard (dashboard.flexype.io) for checkout, coupons, payments, RTO, analytics.
+```
 
 ### (c) On the Shopify storefront
 
