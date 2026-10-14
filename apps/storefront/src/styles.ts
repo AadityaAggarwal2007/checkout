@@ -120,6 +120,13 @@ input,select,textarea{font:inherit;color:inherit;margin:0}
 .ck-code-row button{height:46px;padding:0 20px;border-radius:10px;background:var(--p);color:var(--pt);font-weight:600}
 .ck-codes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .ck-code{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:500}
+.ck-cards{display:flex;flex-direction:column;gap:8px;margin-top:12px;max-height:46vh;overflow:auto}
+.ck-card{display:flex;align-items:center;gap:10px;border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+.ck-card.ck-on{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 6%,#fff)}
+.ck-card-text{flex:1;display:flex;flex-direction:column;gap:3px;font-size:13px;min-width:0}
+.ck-card-text>span:not(.ck-code){color:#6b7280;font-size:12px}
+.ck-card-text .ck-code{align-self:flex-start;padding:2px 8px;font-size:12px}
+.ck-card-btn{font-weight:700;color:var(--p);font-size:13px;padding:6px 4px}
 .ck-code.ck-on{border-color:var(--ok);color:var(--ok);background:color-mix(in srgb,var(--ok) 8%,#fff)}
 .ck-msg{margin-top:10px;font-size:13px}
 .ck-msg.ck-err{color:#DC2626}

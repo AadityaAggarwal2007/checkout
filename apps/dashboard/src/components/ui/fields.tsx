@@ -1,5 +1,5 @@
 'use client';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 export function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
   return (
@@ -81,5 +81,71 @@ export function Section({ title, description, right, children }: { title: string
       </div>
       {children && <div className="mt-4 space-y-4">{children}</div>}
     </section>
+  );
+}
+
+/** Rupees typed by the merchant, kept as paise (undefined = empty). Never floats in maths. */
+export function MoneyInput({ value, onChange, placeholder, label }: { value: number | undefined; onChange: (paise: number | undefined) => void; placeholder?: string; label?: string }) {
+  const show = (p: number | undefined) => (p === undefined ? '' : p % 100 === 0 ? String(p / 100) : (p / 100).toFixed(2));
+  const [text, setText] = useState(show(value));
+  useEffect(() => {
+    // Follow outside changes (load, reset) without fighting the merchant's typing.
+    setText((t) => (toPaiseOrUndefined(t) === value ? t : show(value)));
+  }, [value]);
+  return (
+    <div className="flex items-center rounded-lg border border-ink-line bg-white focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-100">
+      <span className="pl-3 text-ink-3">₹</span>
+      <input
+        className="w-full rounded-lg bg-transparent px-2 py-2 text-sm outline-none"
+        inputMode="decimal"
+        aria-label={label}
+        placeholder={placeholder}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          const p = toPaiseOrUndefined(e.target.value);
+          if (p !== null) onChange(p);
+        }}
+      />
+    </div>
+  );
+}
+
+/** "" -> undefined, "199.5" -> 19950, junk -> null */
+function toPaiseOrUndefined(t: string): number | undefined | null {
+  const s = t.trim();
+  if (!s) return undefined;
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(s)) return null;
+  const [w, f = ''] = s.split('.');
+  return Number(w) * 100 + Number(f.padEnd(2, '0'));
+}
+
+export function NumberInput({ value, onChange, min = 0, placeholder, label }: { value: number | undefined; onChange: (n: number | undefined) => void; min?: number; placeholder?: string; label?: string }) {
+  return (
+    <input
+      className="input"
+      type="number"
+      min={min}
+      aria-label={label}
+      placeholder={placeholder}
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value === '' ? undefined : Math.max(min, Number(e.target.value)))}
+    />
+  );
+}
+
+export function Radio<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: Array<[T, string, string?]> }) {
+  return (
+    <div className="space-y-2">
+      {options.map(([v, label, hint]) => (
+        <label key={v} className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 ${value === v ? 'border-brand-500 bg-brand-50' : 'border-ink-line'}`}>
+          <input type="radio" className="mt-1 accent-brand-600" checked={value === v} onChange={() => onChange(v)} />
+          <span>
+            <span className="block text-sm font-medium">{label}</span>
+            {hint && <span className="text-xs text-ink-3">{hint}</span>}
+          </span>
+        </label>
+      ))}
+    </div>
   );
 }

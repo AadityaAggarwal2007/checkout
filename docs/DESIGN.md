@@ -167,7 +167,7 @@ The full schema lives in `apps/server/prisma/schema.prisma`; this table is its m
 | 0 | Monorepo, TS, `packages/core` (money, cart, pricing engine), full Prisma schema, encryption, auth, stores, Shopify OAuth (state + HMAC), tests + CI | ✅ 2026-10-14 |
 | 1 | Storefront loader + drawer (port + TS), drawer config API + dashboard pages with live preview, theme app embed | ✅ 2026-10-14 on the local test store (a real Shopify dev store waits for the Partner account) |
 | 2 | Checkout: session, shipping, address, WhatsApp OTP, PayGlocal + PayU (verified), COD / partial COD, Shopify order, thank-you | a real test order on a dev store, paid and COD — ✅ built and tested on localhost 2026-10-14 (fake WhatsApp / gateway / Shopify); the real test order waits for the owner's accounts (§8) |
-| 3 | Coupon engine (all types + payment offers) in drawer and checkout, free gifts, B1G1, bundles | rule tests + same totals in drawer, checkout and Shopify order |
+| 3 | Coupon engine (all types + payment offers) in drawer and checkout, free gifts, B1G1, bundles | rule tests + same totals in drawer, checkout and Shopify order — ✅ 2026-10-14 (wizard for all 6 kinds + payment offers, list with stats, shopper coupon cards; totals tests per kind) |
 | 4 | RTO suite, upsell rules + timer, exit flow, checkout design tabs with preview | |
 | 5 | Dashboard home + funnel, orders, abandoned checkouts, Meta Pixel, logs, users, API keys | |
 | 6 | Billing (1%), go-live checklist, load test, security review | owner's go-live |

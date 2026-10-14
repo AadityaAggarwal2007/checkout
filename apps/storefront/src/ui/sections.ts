@@ -319,10 +319,23 @@ export function couponSheet(s: State, a: Actions): HTMLElement[] {
   input.addEventListener('keydown', (e) => (e as KeyboardEvent).key === 'Enter' && submit());
   window.setTimeout(() => input.focus(), 50);
   const codes = h('div', { class: 'ck-codes' });
+  const cards = h('div', { class: 'ck-cards' });
   for (const c of s.config.visibleCodes) {
     const on = s.codes.includes(c.code);
-    codes.appendChild(
-      h('button', { class: `ck-code${on ? ' ck-on' : ''}`, title: c.title ?? c.code, onclick: () => (on ? a.removeCode(c.code) : a.applyCode(c.code)) }, svg(icon(on ? 'check' : 'tag', 13)), c.code),
+    // A card like the checkout's: title, one line of conditions, the code, Apply / Remove.
+    cards.appendChild(
+      h(
+        'div',
+        { class: `ck-card${on ? ' ck-on' : ''}` },
+        h(
+          'div',
+          { class: 'ck-card-text' },
+          h('b', {}, c.title ?? c.code),
+          c.details?.[0] ? h('span', {}, c.details[0]) : null,
+          h('span', { class: 'ck-code' }, svg(icon(on ? 'check' : 'tag', 12)), c.code),
+        ),
+        h('button', { class: 'ck-card-btn', onclick: () => (on ? a.removeCode(c.code) : a.applyCode(c.code)) }, on ? 'Remove' : 'Apply'),
+      ),
     );
   }
   for (const c of s.codes.filter((x) => !s.config.visibleCodes.some((v) => v.code === x))) {
@@ -337,6 +350,7 @@ export function couponSheet(s: State, a: Actions): HTMLElement[] {
       h('h3', {}, 'Apply Discount Code'),
       h('div', { class: 'ck-code-row' }, input, h('button', { onclick: submit }, d.applyText)),
       codes,
+      cards,
       s.codeMessage ? h('div', { class: `ck-msg ck-${s.codeMessage.kind}` }, s.codeMessage.text) : null,
     ),
   ];
