@@ -68,3 +68,24 @@ jobs:
         with:
           name: playwright-report
           path: test-results/
+
+  # After every green push to the working branch, the VPS copy updates itself (deploy/update.sh).
+  # The key can only run that script as the `checkout` user (see deploy/install.sh).
+  deploy:
+    needs: [test, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/claude/flexype-plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency: deploy-vps
+    steps:
+      - name: Update the checkout app on the VPS
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          PORT: ${{ secrets.VPS_SSH_PORT }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then echo "No VPS secrets: nothing deployed."; exit 0; fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${PORT:-22}" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key -p "${PORT:-22}" -o BatchMode=yes -o ConnectTimeout=20 "checkout@$HOST" deploy
