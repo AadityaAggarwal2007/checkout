@@ -33,7 +33,8 @@ const ONLINE: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet', 'emi', '
  * every online method (the common one-gateway store).
  */
 export function routeTable(accounts: GatewayAccount[], routes: PaymentRoute[], devAllowed: boolean): Map<PaymentMethod, GatewayAccount> {
-  const usable = accounts.filter((a) => a.active && (a.provider !== 'DEV' || devAllowed));
+  // A real gateway always comes before the local test one (both on = real payments, test only as a spare).
+  const usable = accounts.filter((a) => a.active && (a.provider !== 'DEV' || devAllowed)).sort((a, b) => Number(a.provider === 'DEV') - Number(b.provider === 'DEV'));
   const out = new Map<PaymentMethod, GatewayAccount>();
   for (const r of routes) {
     const acc = usable.find((a) => a.id === r.gatewayAccountId);

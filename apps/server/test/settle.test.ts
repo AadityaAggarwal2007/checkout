@@ -68,3 +68,14 @@ describe('settling a payment', () => {
     expect(['UPI', 'CC', 'DC', 'NB', 'CASH', 'EMI', 'BNPL', 'NET_BANKING', 'CARD', 'x', undefined].map(ourMethod)).toEqual(['upi', 'card', 'card', 'netbanking', 'wallet', 'emi', 'pay_later', 'netbanking', 'card', undefined, undefined]);
   });
 });
+
+describe('which gateway takes a method', () => {
+  it('a real gateway comes before the local test one, whichever was added first', async () => {
+    const { routeTable } = await import('../src/checkout/pricing.js');
+    const dev = { id: 'd', provider: 'DEV', active: true } as never;
+    const payu = { id: 'p', provider: 'PAYU', active: true } as never;
+    expect(routeTable([dev, payu], [], true).get('upi')).toBe(payu);
+    expect(routeTable([dev], [], true).get('upi')).toBe(dev);
+    expect(routeTable([dev, payu], [], false).get('card')).toBe(payu);
+  });
+});
