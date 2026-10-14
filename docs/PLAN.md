@@ -89,6 +89,9 @@ server syntax + `prisma generate` OK):
 4. **Login OTP:** **no OTP for now.** Consequence (Claude): without OTP the server must NOT return saved addresses
    for a typed phone number (today's leak). Saved address can only come from the same shopper's own browser
    (remembered on that device). "One-Click Checkout" across devices waits for OTP.
+5. **One place for the merchant** (owner 2026-10-14): OUR dashboard holds everything (cart drawer AND checkout:
+   coupons, payments, RTO, analytics). The Shopify app only installs (OAuth), turns the drawer on through the theme
+   app embed, and links to our dashboard. No settings inside Shopify admin.
 
 ## Design rules decided while reading FlexyPe (keep when building)
 
