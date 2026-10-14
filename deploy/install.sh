@@ -2,7 +2,11 @@
 # Checkout product on a VPS, fully separate from anything else on it (ShipTrack keeps running as is).
 #
 #   sudo bash deploy/install.sh --domain checkout.example.com [--demo-domain demo-store.example.com]
-#                               [--mode demo|live] [--branch claude/flexype-plan]
+#                               [--mode demo|live] [--branch claude/flexype-plan] [--replace-site NAME]
+#
+# --replace-site NAME: the domain is served today by the nginx site NAME (e.g. `builder` on
+#   merchantbuild.in). Only that site's link in sites-enabled is removed (its file, app, database
+#   and settings stay); undo: sudo bash /srv/checkout/app/deploy/restore-site.sh
 #
 # What it creates (nothing else is touched):
 #   Linux user   checkout            (own Node 20 via nvm, own PM2; no sudo rights)
@@ -22,6 +26,7 @@ BRANCH="claude/flexype-plan"
 DOMAIN=""
 DEMO_DOMAIN=""
 MODE="demo"
+REPLACE_SITE=""
 APP_USER="checkout"
 BASE="/srv/checkout"
 APP="$BASE/app"
@@ -44,6 +49,7 @@ while [ $# -gt 0 ]; do
     --demo-domain) DEMO_DOMAIN="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
     --branch) BRANCH="$2"; shift 2 ;;
+    --replace-site) REPLACE_SITE="$2"; shift 2 ;;
     *) die "unknown option $1" ;;
   esac
 done
@@ -53,6 +59,8 @@ valid_domain() { [[ "$1" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*
 valid_domain "$DOMAIN" || die "give the domain: --domain checkout.yourdomain.com"
 [ -z "$DEMO_DOMAIN" ] || valid_domain "$DEMO_DOMAIN" || die "--demo-domain is not a domain"
 [ "$MODE" = demo ] || [ "$MODE" = live ] || die "--mode is demo or live"
+[ -z "$REPLACE_SITE" ] || [[ "$REPLACE_SITE" =~ ^[A-Za-z0-9._-]+$ ]] || die "--replace-site takes an nginx site name like builder"
+[ "$REPLACE_SITE" != checkout.conf ] || REPLACE_SITE=""
 [ "$MODE" = live ] && DEMO_DOMAIN=""
 [ "$MODE" = live ] || [ -n "$DEMO_DOMAIN" ] || die "demo mode needs a second address for the demo store: --demo-domain demo-store.yourdomain.com"
 FIRST_RUN=0
@@ -71,7 +79,8 @@ fi
 if [ "$SKIP_NGINX" != 1 ] && [ -d /etc/nginx ]; then
   for d in $DOMAIN $DEMO_DOMAIN; do
     other=$(grep -rlsw "server_name.*$d" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -v '/checkout.conf$' || true)
-    [ -z "$other" ] || die "$d is already served by another nginx site ($other). Use another subdomain."
+    if [ -n "$REPLACE_SITE" ]; then other=$(echo "$other" | grep -vx "/etc/nginx/sites-enabled/$REPLACE_SITE" || true); fi
+    [ -z "$other" ] || die "$d is already served by another nginx site ($other). Use another subdomain, or --replace-site <name> if that site should step aside."
   done
 fi
 command -v psql >/dev/null || die "PostgreSQL is not installed on this server (this script uses the existing one)."
@@ -170,7 +179,10 @@ $MODE_LINES
 ENVFILE
   umask 022
 else
-  echo "kept the existing settings (edit $ENV_FILE by hand to change them)"
+  # Keep every secret; only the addresses follow --domain / --demo-domain.
+  sed -i -E "s|^PUBLIC_URL=.*|PUBLIC_URL=https://$DOMAIN|; s|^DASHBOARD_URL=.*|DASHBOARD_URL=https://$DOMAIN|" "$ENV_FILE"
+  [ -z "$DEMO_DOMAIN" ] || sed -i -E "s|^DEV_STORE_URL=.*|DEV_STORE_URL=https://$DEMO_DOMAIN|" "$ENV_FILE"
+  echo "kept the existing secrets; addresses set to $DOMAIN ${DEMO_DOMAIN:+/ $DEMO_DOMAIN}"
 fi
 chown root:"$APP_USER" "$ETC" "$ENV_FILE" && chmod 750 "$ETC" && chmod 640 "$ENV_FILE"
 MODE=$(grep '^CHECKOUT_MODE=' "$ENV_FILE" | cut -d= -f2)
@@ -182,13 +194,16 @@ as_app "cd $APP/apps/server && set -a && . $ENV_FILE && set +a && npx prisma gen
 as_app "cd $APP && npm run build:storefront >/dev/null && npm run build:checkout >/dev/null"
 as_app "cd $APP/apps/dashboard && API_URL=http://127.0.0.1:$API_PORT npx next build >/dev/null"
 
-if [ "$MODE" = demo ] && [ ! -f "$ETC/demo-login.txt" ]; then
+if [ "$MODE" = demo ]; then
   say "Demo store and its own login"
+  # The password is used only when the login is first made; later runs keep it (and move the store's address).
   DEMO_PASS=$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)
   as_app "cd $APP/apps/server && set -a && . $ENV_FILE && set +a && DEMO_OWNER_EMAIL=owner@demo.checkout DEMO_OWNER_PASSWORD='$DEMO_PASS' npx tsx scripts/seed-dev.ts >/dev/null"
-  umask 077
-  printf 'Dashboard https://%s\nlogin    owner@demo.checkout\npassword %s\n' "$DOMAIN" "$DEMO_PASS" > "$ETC/demo-login.txt"
-  umask 022
+  if [ ! -f "$ETC/demo-login.txt" ]; then
+    umask 077
+    printf 'login    owner@demo.checkout\npassword %s\n' "$DEMO_PASS" > "$ETC/demo-login.txt"
+    umask 022
+  fi
 fi
 
 # ------------------------------------------------------------------ run
@@ -219,7 +234,14 @@ if [ "$SKIP_NGINX" = 1 ] || ! command -v nginx >/dev/null; then
 else
   say "nginx site for $DOMAIN ${DEMO_DOMAIN:+and $DEMO_DOMAIN}"
   CONF=/etc/nginx/sites-available/checkout.conf
-  if [ ! -f "$CONF" ] || ! grep -q 'ssl_certificate' "$CONF"; then
+  WWW=""
+  getent hosts "www.$DOMAIN" >/dev/null 2>&1 && WWW="www.$DOMAIN"
+  if [ -n "$REPLACE_SITE" ] && [ -e "/etc/nginx/sites-enabled/$REPLACE_SITE" ]; then
+    rm -f "/etc/nginx/sites-enabled/$REPLACE_SITE"
+    echo "$REPLACE_SITE" > "$ETC/replaced-site.txt"
+    echo "nginx site '$REPLACE_SITE' stepped aside (its file, app and data are kept; undo: sudo bash $APP/deploy/restore-site.sh)"
+  fi
+  if [ ! -f "$CONF" ] || ! grep -q 'ssl_certificate' "$CONF" || ! grep -q "server_name $DOMAIN;" "$CONF"; then
     {
       cat <<NGINX
 # Checkout product (deploy/install.sh). Only this file belongs to it.
@@ -245,6 +267,15 @@ server {
     }
 }
 NGINX
+      if [ -n "$WWW" ]; then
+        cat <<NGINX
+server {
+    listen 80;
+    server_name $WWW;
+    return 301 https://$DOMAIN\$request_uri;
+}
+NGINX
+      fi
       if [ -n "$DEMO_DOMAIN" ]; then
         cat <<NGINX
 server {
@@ -263,13 +294,15 @@ NGINX
   ln -sf "$CONF" /etc/nginx/sites-enabled/checkout.conf
   if ! nginx -t 2>/tmp/checkout-nginx.txt; then
     rm -f /etc/nginx/sites-enabled/checkout.conf
+    if [ -n "$REPLACE_SITE" ] && [ -f "/etc/nginx/sites-available/$REPLACE_SITE" ]; then ln -sf "/etc/nginx/sites-available/$REPLACE_SITE" "/etc/nginx/sites-enabled/$REPLACE_SITE"; fi
     cat /tmp/checkout-nginx.txt
     die "nginx did not accept the new site, so it was switched off again (other sites untouched)."
   fi
   systemctl reload nginx 2>/dev/null || nginx -s reload
   if command -v certbot >/dev/null; then
-    certbot --nginx --non-interactive --agree-tos --register-unsafely-without-email --redirect \
-      -d "$DOMAIN" ${DEMO_DOMAIN:+-d "$DEMO_DOMAIN"} >/dev/null 2>&1 \
+    # Its own certificate ("checkout"), so another site's certificate is never changed.
+    certbot --nginx --non-interactive --agree-tos --register-unsafely-without-email --redirect --cert-name checkout \
+      -d "$DOMAIN" ${WWW:+-d "$WWW"} ${DEMO_DOMAIN:+-d "$DEMO_DOMAIN"} >/dev/null 2>&1 \
       && echo "HTTPS on" \
       || echo "!! HTTPS not set yet: point the DNS of $DOMAIN ${DEMO_DOMAIN:+and $DEMO_DOMAIN} to this server, then run this script again."
   else
