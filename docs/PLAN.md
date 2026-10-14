@@ -313,9 +313,19 @@ Store shown: "Kurtiya Store" (our own kurtiya uses FlexyPe now). Gateway PayGloc
    SETUP: Coupon code / Automatic, code, Percentage / Fixed, value, max cap. Summary: "Purchase Driven · 0% off on total
    value · Coupon will not be shown to any customer". (User Behaviour step = based on past order patterns; not captured.)
 
+73 CREATE FREE SHIPPING DISCOUNT — 5 steps SETUP › CONDITION › USER ELIGIBILITY › USAGE LIMITS › PREVIEW.
+   SETUP: Coupon code / Automatic, code; Shipping rates: "Exclude shipping rates over a certain amount" (checkbox + amount:
+   free shipping does not cover rates above it).
+74 CREATE BUNDLE DISCOUNT — same 5 steps. SETUP: Coupon code / Automatic, code; Applies to: Specific products / Specific
+   collections + search/Browse; "Single Product Pack Options" (bundle multiple quantities or variants of ONE product);
+   Quantity (items in the bundle; discount stops after it); Discount types: Fixed bundle price (pay a set price for the
+   group) / Fixed amount off / Percentage off.
+75 UPSELL > TIMER SETTINGS (store-wide): Upsell Timer Scope > Timer Level: "Per Session" (timer resets after each checkout
+   session ends) / (other levels, e.g. per customer); Save Config.
+   => All 6 coupon types now seen except Purchase Driven's "User Behaviour" step.
+
 NOT CAPTURED (ask the owner): Billing & Usage page (FlexyPe charges the merchant: "Outstanding payable" card),
-each RTO filter's rule form, an order's detail page, an abandoned checkout's detail, Upsell "Timer
-Settings", notifications (bell), Purchase Driven 'User Behaviour' step, Free shipping / Bundle coupon editors, integration config screens.
+each RTO filter's rule form, an order's detail page, an abandoned checkout's detail,  notifications (bell), Purchase Driven 'User Behaviour' step, integration config screens.
 ```
 
 ### (b) Add to cart / cart drawer setup
