@@ -251,7 +251,7 @@ NGINX
     cat /tmp/checkout-nginx.txt
     die "nginx did not accept the new site, so it was switched off again (other sites untouched)."
   fi
-  systemctl reload nginx
+  systemctl reload nginx 2>/dev/null || nginx -s reload
   if command -v certbot >/dev/null; then
     certbot --nginx --non-interactive --agree-tos --register-unsafely-without-email --redirect \
       -d "$DOMAIN" ${DEMO_DOMAIN:+-d "$DEMO_DOMAIN"} >/dev/null 2>&1 \
