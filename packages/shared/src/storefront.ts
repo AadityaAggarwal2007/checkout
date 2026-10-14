@@ -8,7 +8,8 @@ export interface StorefrontConfig {
   drawer: DrawerSettings;
   /** Codes shown in the "Apply discount code" sheet (only coupons marked visible). */
   visibleCodes: Array<{ code: string; title?: string }>;
-  checkoutUrl: string;
+  /** 'shopify' until our checkout is live for the store (Phase 2), then 'popup'. */
+  checkout: { mode: 'shopify' } | { mode: 'popup'; url: string };
 }
 
 export const priceRequestSchema = z.object({
@@ -32,6 +33,7 @@ export interface PricedCartLine {
   quantity: number;
   unitPrice: number;
   compareAtPrice?: number;
+  subtotal: number;
   discount: number;
   total: number;
   groupIds: string[];

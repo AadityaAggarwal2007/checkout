@@ -135,8 +135,8 @@ The full schema lives in `apps/server/prisma/schema.prisma`; this table is its m
 
 | Phase | What | Done when |
 |---|---|---|
-| 0 | Monorepo, TS, `packages/core` (money, cart, pricing engine), full Prisma schema, encryption, auth, stores, Shopify OAuth (state + HMAC), tests + CI | `npm test` and typecheck green in CI |
-| 1 | Storefront loader + drawer (port + TS), drawer config API + dashboard pages with live preview, theme app embed | drawer works on a dev store from the embed toggle |
+| 0 | Monorepo, TS, `packages/core` (money, cart, pricing engine), full Prisma schema, encryption, auth, stores, Shopify OAuth (state + HMAC), tests + CI | ✅ 2026-10-14 |
+| 1 | Storefront loader + drawer (port + TS), drawer config API + dashboard pages with live preview, theme app embed | ✅ 2026-10-14 on the local test store (a real Shopify dev store waits for the Partner account) |
 | 2 | Checkout: session, shipping, address, WhatsApp OTP, PayGlocal + PayU (verified), COD / partial COD, Shopify order, thank-you | a real test order on a dev store, paid and COD |
 | 3 | Coupon engine (all types + payment offers) in drawer and checkout, free gifts, B1G1, bundles | rule tests + same totals in drawer, checkout and Shopify order |
 | 4 | RTO suite, upsell rules + timer, exit flow, checkout design tabs with preview | |

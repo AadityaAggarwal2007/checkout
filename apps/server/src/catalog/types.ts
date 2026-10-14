@@ -28,6 +28,8 @@ export interface CatalogProduct {
 export interface Catalog {
   variants(storeId: string, variantIds: string[]): Promise<Map<string, CatalogVariant>>;
   products(storeId: string, productIds: string[]): Promise<CatalogProduct[]>;
+  /** Dashboard product picker: title search, first 20. */
+  search(storeId: string, query: string): Promise<CatalogProduct[]>;
 }
 
 export const gidToId = (gid: string): string => gid.slice(gid.lastIndexOf('/') + 1);

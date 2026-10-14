@@ -38,6 +38,12 @@ Started 2026-10-14. This file is the memory of the planning. Every new session r
 - 2026-10-14 Phase 0 started: `docs/DESIGN.md`, `packages/core` (pricing engine, 33 tests), full Prisma schema
   (36 tables, first migration), `apps/server` (env, encryption keyring, merchant login, store access, Shopify OAuth
   with state + HMAC, webhooks incl. privacy topics; 20 tests on a real PostgreSQL), CI workflow.
+- 2026-10-14 Phase 1 done (owner: "local pa host kardio"): cart drawer on the store (Shadow DOM, 13 KB gzip,
+  add-to-cart capture, B1G1 groups, free-gift lines, coupons sheet, upsells, reward bar, notes, terms,
+  trust badges, theme cart count), public storefront API (prices from the catalog, never the browser),
+  dashboard (login/signup, store overview, drawers list, editor with live preview, product picker),
+  theme app embed + Shopify app config, a local fake Shopify store, 66 unit/API tests + 5 Playwright
+  end-to-end tests, CI runs all of it. Everything runs on localhost; no domain needed yet.
 
 ## What exists today (code on `main`, last commit 513997c, 2026-08-22)
 

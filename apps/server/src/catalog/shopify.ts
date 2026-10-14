@@ -97,6 +97,16 @@ export class ShopifyCatalog implements Catalog {
     return out;
   }
 
+  async search(storeId: string, query: string): Promise<CatalogProduct[]> {
+    const q = query.replace(/["\\]/g, ' ').trim();
+    const data = await this.gql<{ products: { nodes: { id: string }[] } }>(
+      storeId,
+      `query($q: String) { products(first: 20, query: $q, sortKey: TITLE) { nodes { id } } }`,
+      { q: q ? `title:*${q}*` : null },
+    );
+    return this.products(storeId, data.products.nodes.map((n) => gidToId(n.id)));
+  }
+
   async products(storeId: string, productIds: string[]): Promise<CatalogProduct[]> {
     if (productIds.length === 0) return [];
     const data = await this.gql<{ nodes: (null | { id: string; title: string; handle: string; featuredImage?: { url: string } | null; collections: { nodes: { id: string }[] }; variants: { nodes: GqlVariant[] } })[] }>(

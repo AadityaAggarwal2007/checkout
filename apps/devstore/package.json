@@ -1,0 +1,11 @@
+{
+  "name": "@checkout/devstore",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A fake Shopify storefront for local development: product pages + the Shopify AJAX cart API, loading our storefront script.",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

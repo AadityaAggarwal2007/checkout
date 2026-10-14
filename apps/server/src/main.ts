@@ -10,7 +10,7 @@ import { Tokens } from './lib/tokens.js';
 const env = loadEnv();
 const prisma = db();
 const keyring = new Keyring(env.ENCRYPTION_KEYS);
-const catalog = env.CATALOG === 'dev' ? new DevCatalog(env.DEV_CATALOG_FILE) : new ShopifyCatalog(prisma, keyring, env.SHOPIFY_API_VERSION);
+const catalog = env.CATALOG === 'dev' ? new DevCatalog(env.DEV_CATALOG_FILE, process.env.DEV_STORE_URL) : new ShopifyCatalog(prisma, keyring, env.SHOPIFY_API_VERSION);
 const app = await buildApp(
   {
     catalog,

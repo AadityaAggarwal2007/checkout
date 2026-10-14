@@ -1,0 +1,34 @@
+{% comment %}
+  App embed: Online Store > Themes > Customize > App embeds > "Cart drawer".
+  Loads our storefront script; the store is found by its permanent *.myshopify.com domain.
+{% endcomment %}
+<script
+  src="{{ block.settings.server_url }}/storefront/loader.js"
+  data-shop="{{ shop.permanent_domain }}"
+  defer
+></script>
+{% if block.settings.cart_count_class != blank %}
+  <script>window.__ckCartCountClass = {{ block.settings.cart_count_class | json }};</script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Cart drawer",
+  "target": "body",
+  "settings": [
+    {
+      "type": "text",
+      "id": "cart_count_class",
+      "label": "Cart count class name",
+      "info": "Only if the theme's cart count does not update. Example: cart-count-bubble",
+      "default": "cart-count-bubble"
+    },
+    {
+      "type": "text",
+      "id": "server_url",
+      "label": "Server (do not change)",
+      "default": "https://REPLACE_WITH_PUBLIC_URL"
+    }
+  ]
+}
+{% endschema %}

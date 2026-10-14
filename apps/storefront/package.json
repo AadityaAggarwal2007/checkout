@@ -1,0 +1,20 @@
+{
+  "name": "@checkout/storefront",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The script the store loads: cart drawer (Shadow DOM), add-to-cart capture, pricing preview.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@checkout/core": "*",
+    "@checkout/shared": "*"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "happy-dom": "15.11.7"
+  }
+}

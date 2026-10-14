@@ -10,3 +10,7 @@ Thumbs.db
 coverage/
 *.tsbuildinfo
 dist/
+test-results/
+playwright-report/
+.next/
+next-env.d.ts

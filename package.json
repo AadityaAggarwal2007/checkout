@@ -13,11 +13,15 @@
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "dev": "bash scripts/dev.sh",
+    "build:storefront": "npm run build -w @checkout/storefront",
+    "e2e:prepare": "npm run build:storefront && cd apps/server && DATABASE_URL=${E2E_DATABASE_URL:-postgresql://checkout:checkout@localhost:5432/checkout_e2e} npx prisma migrate deploy && DATABASE_URL=${E2E_DATABASE_URL:-postgresql://checkout:checkout@localhost:5432/checkout_e2e} npx tsx scripts/reset-and-seed.ts",
+    "e2e": "npm run e2e:prepare && npx playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
+    "@playwright/test": "1.48.2",
+    "@types/node": "20.17.6",
     "typescript": "5.6.3",
-    "vitest": "2.1.9",
-    "@types/node": "20.17.6"
+    "vitest": "2.1.9"
   }
 }

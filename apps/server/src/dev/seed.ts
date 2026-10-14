@@ -58,10 +58,10 @@ export async function seedDemo(prisma: PrismaClient): Promise<{ storeId: string;
       { ...base, id: '', kind: 'buy_x_get_y', code: 'B1G1', automatic: true, title: 'Buy 1 Get 1 Free', buy: { quantity: 1, scope: { collectionIds: ['9001'] } }, get: { quantity: 1, scope: { collectionIds: ['9001'] }, percentOff: 100 } },
       { ...base, id: '', kind: 'amount_off', code: 'PREPAID', automatic: true, title: 'Extra 5% off on prepaid', target: 'order', value: { type: 'percent', percent: 5 }, limits: { combinable: true, disableCod: true, disablePartialCod: true } },
       ...[
-        ['FREEGIFT299', 29900, '1009', 'Men Set of 4 Eau De Parfum 20 ml', 4900],
-        ['FREEGIFT499', 49900, '1008', 'Large Apfra Quilted Shoulder Bag', 39900],
-        ['FREEGIFT599', 59900, '1007', 'Saint Laurent For Womens', 49900],
-      ].map(([code, min, pid, title, price]) => ({
+        ['FREEGIFT299', 29900, '1009', '2081', 'Men Set of 4 Eau De Parfum 20 ml', 4900],
+        ['FREEGIFT499', 49900, '1008', '2071', 'Large Apfra Quilted Shoulder Bag', 39900],
+        ['FREEGIFT599', 59900, '1007', '2061', 'Saint Laurent For Womens', 49900],
+      ].map(([code, min, pid, vid, title, price]) => ({
         ...base,
         id: '',
         kind: 'free_gift' as const,
@@ -69,7 +69,7 @@ export async function seedDemo(prisma: PrismaClient): Promise<{ storeId: string;
         automatic: true,
         title: `Free gift on ₹${(min as number) / 100}+`,
         condition: { minSubtotal: min as number },
-        gifts: [{ productId: pid as string, variantId: String(Number(pid) + 1054), title: title as string, unitPrice: price as number, quantity: 1 }],
+        gifts: [{ productId: pid as string, variantId: vid as string, title: title as string, unitPrice: price as number, quantity: 1 }],
       })),
     ];
     for (const c of coupons) await prisma.coupon.create({ data: toCouponRow(store.id, c) });

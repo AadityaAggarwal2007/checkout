@@ -18,6 +18,8 @@ const schema = z.object({
   /** 'shopify' = real stores; 'dev' = products from DEV_CATALOG_FILE (local test store). */
   CATALOG: z.enum(['shopify', 'dev']).default('shopify'),
   DEV_CATALOG_FILE: z.string().default('../devstore/catalog.json'),
+  /** Built storefront script (apps/storefront/dist/loader.js). */
+  STOREFRONT_DIST: z.string().default('../storefront/dist/loader.js'),
   /** Where the checkout page is served (iframe). Defaults to PUBLIC_URL. */
   CHECKOUT_URL: z.string().url().optional(),
 });

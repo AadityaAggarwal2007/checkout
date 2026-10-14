@@ -36,6 +36,12 @@ describe('storefront config', () => {
     );
   });
 
+  it('finds the store by its myshopify domain (theme app embed)', async () => {
+    const res = await app.inject({ method: 'GET', url: `/storefront/config?shop=${DEMO.shopDomain}` });
+    expect(res.statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/storefront/config?shop=evil.com' })).statusCode).toBe(400);
+  });
+
   it('answers 404 for an unknown key and the preflight for POST', async () => {
     expect((await app.inject({ method: 'GET', url: '/storefront/config?key=nope' })).statusCode).toBe(404);
     const pre = await app.inject({ method: 'OPTIONS', url: `/storefront/price?key=${DEMO.widgetKey}`, headers: { origin: 'https://x.test', 'access-control-request-method': 'POST' } });
