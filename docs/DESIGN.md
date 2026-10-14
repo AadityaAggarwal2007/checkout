@@ -110,6 +110,35 @@ free gift lines, savings) → Checkout.
 5. *Pay:* gateway page; the checkout polls; success → Shopify order created → thank-you; failure → retry.
 Exit flow: leaving shows default / out-of-stock / savings reminder / survey (per settings).
 
+### How the checkout works (Phase 2, as built)
+
+- **Start:** the store page (`apps/storefront/src/checkout-frame.ts`) posts the cart's variant ids + quantities to
+  `POST /storefront/checkout`; the server re-reads prices, creates a `CheckoutSession` and answers
+  `/checkout/s/<id>#t=<token>` (the token is a signed JWT, purpose `checkout`, 24 h, kept in the URL fragment so no
+  server log sees it). The store page also passes `&v=phone|desktop` (inside the popup the page cannot tell).
+  Before the merchant switches the checkout on, it is used only on a store opened with the merchant's test link
+  (`?ck_test=<key>`, key derived from the store id with the pepper, shown in Settings > Payments).
+- **Login:** `POST /checkout/api/otp/send` (WhatsApp authentication template; 30 s between codes, 3 per number per
+  10 min, 10 a day, 20 per IP an hour) → `/otp/verify` (5 tries, 5 min) → a device token (32 random bytes, stored
+  as sha256, 60 days) kept in the iframe's localStorage, sent as `x-ck-device`. Personal data (phone, addresses)
+  is in the state ONLY when that device token belongs to the session's shopper. "Not you?" revokes it.
+- **Address:** saved addresses of this phone in this store, or a new one (validated, saved to the book; the first
+  is the default). A remembered shopper's default address is chosen for them.
+- **Pay:** each payment method row shows its own total (`priceByMethod`). Tapping one sends
+  `{method, expectedTotal}`; prices are re-read fresh and a different total answers 409 `price_changed` with the
+  new state. COD places the order at once. Online: a `PaymentTransaction` with a random ref (≤ 25 chars) and the
+  frozen order draft; the shopper goes to `/checkout/go/<ref>` (desktop: a new tab opened inside the click; phone:
+  the store page navigates) which posts / redirects to the gateway.
+- **Paid:** the return page, the gateway webhook and the iframe's polling all call `settle(ref)`: the gateway's
+  status API decides (PayU `verify_payment`, PayGlocal status by gid); the amount must match. Then `createOrder`
+  (one per session, unique key) → order number, coupon uses, shopper counters, `UsageCharge` 1%, then
+  `orderCreate` in Shopify (failures kept on the order, retried every minute, button in the dashboard).
+- **Back on the store:** desktop: the gateway tab tells the iframe and closes; phone: the thank-you page links to
+  `store/#ck_done` (the loader empties the cart) or, after a failure, `#ck_resume=<token>` (reopens the checkout).
+- **Local fakes** (refused when `NODE_ENV=production`): `OTP_SENDER=dev` (codes in the log and at
+  `/checkout/dev/otp`), `DEV_GATEWAY=1` (Pay / Fail page), `ORDER_SINK=dev` (orders go to the local store,
+  `/dev-admin/orders`), `PINCODE_LOOKUP=dev`.
+
 ## 6. Database (PostgreSQL, Prisma) — designed once, from the whole inventory
 
 Conventions: `id` = cuid string; every store-owned table has `storeId` + index; money columns are `Int` paise;
@@ -137,7 +166,7 @@ The full schema lives in `apps/server/prisma/schema.prisma`; this table is its m
 |---|---|---|
 | 0 | Monorepo, TS, `packages/core` (money, cart, pricing engine), full Prisma schema, encryption, auth, stores, Shopify OAuth (state + HMAC), tests + CI | ✅ 2026-10-14 |
 | 1 | Storefront loader + drawer (port + TS), drawer config API + dashboard pages with live preview, theme app embed | ✅ 2026-10-14 on the local test store (a real Shopify dev store waits for the Partner account) |
-| 2 | Checkout: session, shipping, address, WhatsApp OTP, PayGlocal + PayU (verified), COD / partial COD, Shopify order, thank-you | a real test order on a dev store, paid and COD |
+| 2 | Checkout: session, shipping, address, WhatsApp OTP, PayGlocal + PayU (verified), COD / partial COD, Shopify order, thank-you | a real test order on a dev store, paid and COD — ✅ built and tested on localhost 2026-10-14 (fake WhatsApp / gateway / Shopify); the real test order waits for the owner's accounts (§8) |
 | 3 | Coupon engine (all types + payment offers) in drawer and checkout, free gifts, B1G1, bundles | rule tests + same totals in drawer, checkout and Shopify order |
 | 4 | RTO suite, upsell rules + timer, exit flow, checkout design tabs with preview | |
 | 5 | Dashboard home + funnel, orders, abandoned checkouts, Meta Pixel, logs, users, API keys | |

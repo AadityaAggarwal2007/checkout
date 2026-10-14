@@ -16,7 +16,12 @@ export const DEMO = {
   widgetKey: 'dev-widget-key',
 };
 
-export async function seedDemo(prisma: PrismaClient): Promise<{ storeId: string; userId: string }> {
+/**
+ * localCheckout: also switch our checkout on with the local test gateway (local runs and e2e only;
+ * the test gateway works only on a server started with DEV_GATEWAY=1).
+ */
+export async function seedDemo(prisma: PrismaClient, opts: { localCheckout?: boolean; domain?: string } = {}): Promise<{ storeId: string; userId: string }> {
+  const domain = opts.domain ?? 'localhost:5004';
   const user = await prisma.user.upsert({
     where: { email: DEMO.email },
     create: { email: DEMO.email, name: 'Local Owner', passwordHash: await hashPassword(DEMO.password) },
@@ -24,8 +29,8 @@ export async function seedDemo(prisma: PrismaClient): Promise<{ storeId: string;
   });
   const store = await prisma.store.upsert({
     where: { shopDomain: DEMO.shopDomain },
-    create: { shopDomain: DEMO.shopDomain, name: 'Kurtiya (local)', domain: 'localhost:5004', status: 'ACTIVE', widgetKey: DEMO.widgetKey },
-    update: {},
+    create: { shopDomain: DEMO.shopDomain, name: 'Kurtiya (local)', domain, status: 'ACTIVE', widgetKey: DEMO.widgetKey },
+    update: { domain },
   });
   await prisma.storeMember.upsert({
     where: { storeId_userId: { storeId: store.id, userId: user.id } },
@@ -89,6 +94,15 @@ export async function seedDemo(prisma: PrismaClient): Promise<{ storeId: string;
           },
         },
       },
+    });
+  }
+  if (opts.localCheckout) {
+    await prisma.storeSettings.update({ where: { storeId: store.id }, data: { checkoutEnabled: true, partialCodEnabled: true, partialCodType: 'fixed', partialCodValue: 5000 } });
+    await prisma.gatewayAccount.upsert({
+      where: { storeId_provider: { storeId: store.id, provider: 'DEV' } },
+      // The test gateway has no credentials.
+      create: { storeId: store.id, provider: 'DEV', active: true, credentialsEnc: '' },
+      update: { active: true },
     });
   }
   return { storeId: store.id, userId: user.id };

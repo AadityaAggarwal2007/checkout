@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
+import { logActivity as log } from '../lib/activity.js';
 import { requireStore } from '../plugins/auth.js';
 
 const P = '/api/stores/:storeId/drawers';
@@ -91,8 +92,4 @@ export function drawerRoutes(app: FastifyInstance): void {
     await log(app, storeId, req.user!.id, 'drawer.delete', `Deleted drawer - ${d.name}`, d.id);
     return { ok: true };
   });
-}
-
-async function log(app: FastifyInstance, storeId: string, userId: string, action: string, summary: string, targetId: string) {
-  await app.deps.prisma.activityLog.create({ data: { storeId, userId, action, summary, targetId } });
 }

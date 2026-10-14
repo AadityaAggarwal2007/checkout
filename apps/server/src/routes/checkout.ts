@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { forgetDevice, sendOtp, verifyOtp } from '../checkout/otp.js';
 import { esc, gatewayPostPage, notifyOpenerScript, rupee, sendPage } from '../checkout/pages.js';
-import { CheckoutService, SESSION_TTL_SECONDS, storeOrigins, storeUrl, type SessionWithStore } from '../checkout/service.js';
+import { CheckoutService, isTestKey, SESSION_TTL_SECONDS, storeOrigins, storeUrl, type SessionWithStore } from '../checkout/service.js';
 import { sha256Hex } from '../lib/crypto.js';
 import { HttpError, badRequest, notFound } from '../lib/errors.js';
 import { normaliseShop } from '../lib/shopify.js';
@@ -36,8 +36,8 @@ export function checkoutRoutes(app: FastifyInstance): void {
     const store = key ? await prisma.store.findUnique({ where: { widgetKey: key } }) : await prisma.store.findUnique({ where: { shopDomain: shopDomain! } });
     if (!store || store.status === 'UNINSTALLED' || store.status === 'PAUSED') throw notFound('Store not found.');
     const settings = await prisma.storeSettings.findUnique({ where: { storeId: store.id } });
-    // Live for everyone once switched on; before that only with ?ck_test=1 on the store (merchant testing).
-    if (!settings?.checkoutEnabled && test !== '1') throw new HttpError(403, 'checkout_off', 'Checkout is not switched on for this store.');
+    // Live for everyone once switched on; before that only with the merchant's test link.
+    if (!settings?.checkoutEnabled && !isTestKey(env.HASH_PEPPER, store.id, test)) throw new HttpError(403, 'checkout_off', 'Checkout is not switched on for this store.');
     const body = createCheckoutSchema.safeParse(req.body);
     if (!body.success) throw badRequest('Invalid cart.');
     const { session, url, token } = await service.create(store, body.data);
@@ -82,7 +82,7 @@ export function checkoutRoutes(app: FastifyInstance): void {
       .header('x-content-type-options', 'nosniff')
       .header(
         'content-security-policy',
-        `default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self' ${ancestors}; form-action 'self'; base-uri 'none'`,
+        `default-src 'self'; img-src 'self' https: data: ${storeUrl(session.store)}; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self' ${ancestors}; form-action 'self'; base-uri 'none'`,
       )
       .send(
         `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">` +
@@ -144,10 +144,8 @@ export function checkoutRoutes(app: FastifyInstance): void {
       code: body.data.code,
       userAgent: String(req.headers['user-agent'] ?? ''),
     });
+    // A returning shopper's default address is chosen here too (straight to payment).
     const customer = await service.customerOf(ctx.session, deviceToken);
-    // Returning shopper with a default address: go straight to payment (one-click feel).
-    const saved = customer && !ctx.session.address ? await prisma.customerAddress.findFirst({ where: { customerId: customer.id, deletedAt: null, isDefault: true } }) : null;
-    if (customer && saved) await service.chooseAddress(ctx.session, customer, { addressId: saved.id });
     return send(reply, { deviceToken, state: await service.state(ctx.session, customer) });
   });
 
@@ -260,7 +258,7 @@ export function checkoutRoutes(app: FastifyInstance): void {
       return sendPage(reply, {
         title: 'Order placed',
         body:
-          `<div class="big">✅</div><h1>Thank you! Your order is placed.</h1><p>We have sent the details to your WhatsApp / email.</p>` +
+          `<div class="big">✅</div><h1>Thank you! Your order is placed.</h1><p>Keep the order number for any questions about your order.</p>` +
           `<div class="rows">${rows.map(([k, v]) => `<div><span>${esc(k!)}</span><b>${esc(v!)}</b></div>`).join('')}</div>` +
           `<a class="btn" href="${esc(shop)}/#ck_done">Continue shopping</a><p class="muted">${esc(store.name)}</p>`,
         script: notifyOpenerScript(checkoutOrigin, 'ck:paid', shop),

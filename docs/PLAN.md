@@ -44,6 +44,15 @@ Started 2026-10-14. This file is the memory of the planning. Every new session r
   dashboard (login/signup, store overview, drawers list, editor with live preview, product picker),
   theme app embed + Shopify app config, a local fake Shopify store, 66 unit/API tests + 5 Playwright
   end-to-end tests, CI runs all of it. Everything runs on localhost; no domain needed yet.
+- 2026-10-14 Phase 2 built on localhost (owner: "start kr 2"): our checkout in an iframe (desktop popup, phone
+  full screen) opened from the drawer, the theme cart page and "Buy it now"; WhatsApp OTP login (hashed codes,
+  limits, remembered device, "Not you?"), saved addresses only after OTP, pincode autofill, coupons, price per
+  payment method, COD with confirmation popup, partial COD, PayU + PayGlocal adapters (paid only after the
+  gateway's server-to-server check), a local test gateway, orders (own number CK1001…, 1% usage charge, copy to
+  Shopify with retries), dashboard Settings > Payments, Shipping editor, Orders list + detail. 62 server tests,
+  9 shared tests, 10 Playwright tests. Waiting for the owner: WhatsApp Business (Cloud API token, phone number
+  id, approved OTP template), PayU test key + salt, PayGlocal UAT keys, Shopify Partner app + dev store — then
+  the "real test order" of Phase 2 can be done.
 
 ## What exists today (code on `main`, last commit 513997c, 2026-08-22)
 
@@ -143,8 +152,8 @@ server syntax + `prisma generate` OK):
 ## Open questions (asked 2026-10-14, not answered yet)
 
 1. First test store before outside merchants (e.g. one of our own)?
-2. SMS / OTP provider (MSG91, Fast2SMS, ...)? DLT template approval takes days.
-3. Second gateway after PayGlocal: PayU, Razorpay, Cashfree?
+2. ~~SMS / OTP provider~~ answered: WhatsApp only (owner gives WhatsApp Business).
+3. ~~Second gateway~~ answered: PayGlocal + PayU in v1.
 4. Shopify app review / rules for selling to outside stores: check before Phase 5.
 
 ## FlexyPe inventory (filled from the owner's screenshots)

@@ -160,6 +160,9 @@ function svgImage(id: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><rect width="600" height="600" fill="hsl(${hue} 45% 88%)"/><circle cx="300" cy="250" r="120" fill="hsl(${hue} 55% 62%)"/>${lines.map((l, i) => `<text x="300" y="${440 + i * 44}" font-family="Georgia" font-size="34" text-anchor="middle" fill="hsl(${hue} 50% 25%)">${esc(l)}</text>`).join('')}</svg>`;
 }
 
+/** Orders our checkout "creates in Shopify" (ORDER_SINK=dev). Memory only. */
+const adminOrders: Array<{ id: string; name: string; at: string; order: Record<string, unknown> }> = [];
+
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
@@ -209,11 +212,33 @@ createServer(async (req, res) => {
       cart.items = [];
       return send(res, 200, cartJson(cart));
     }
+    if (path === '/dev-admin/orders' && req.method === 'POST') {
+      const b = await body(req);
+      const n = adminOrders.length + 1;
+      const created = { id: String(700000 + n), name: `#${1000 + n}`, at: new Date().toISOString(), order: (b.order ?? {}) as Record<string, unknown> };
+      adminOrders.push(created);
+      return send(res, 200, { id: created.id, name: created.name });
+    }
+    if (path === '/dev-admin/orders') {
+      if (url.searchParams.get('format') === 'json') return send(res, 200, { orders: adminOrders });
+      const rows = adminOrders
+        .map((o) => {
+          const attrs = (o.order.customAttributes as Array<{ key: string; value: string }> | undefined) ?? [];
+          return `<li><b>${esc(o.name)}</b> — ${esc(attrs.map((a) => `${a.key}: ${a.value}`).join(' · '))} — ${esc(String(o.order.financialStatus ?? ''))}</li>`;
+        })
+        .join('');
+      return send(res, 200, page('Orders (admin)', `<h1>Orders received from the checkout</h1><ul>${rows || '<li>None yet</li>'}</ul>`, cart), 'text/html');
+    }
+    if (path === '/cart' && req.method === 'POST') {
+      res.writeHead(302, { location: '/checkout' });
+      return res.end();
+    }
     if (path === '/cart' || path === '/checkout') {
       const c = cartJson(cart);
       const rows = c.items.map((i) => `<li>${esc(i.title)} × ${i.quantity} — ${rupees(i.final_line_price)}</li>`).join('');
       const title = path === '/cart' ? 'Cart' : 'Shopify checkout (local stand-in)';
-      return send(res, 200, page(title, `<h1>${title}</h1><ul>${rows || '<li>Empty</li>'}</ul><p class="price">Total ${rupees(c.total_price)}</p>`, cart), 'text/html');
+      const button = path === '/cart' && c.items.length ? '<form action="/cart" method="post"><button class="btn buy" type="submit" name="checkout">Check out</button></form>' : '';
+      return send(res, 200, page(title, `<h1>${title}</h1><ul>${rows || '<li>Empty</li>'}</ul><p class="price">Total ${rupees(c.total_price)}</p>${button}`, cart), 'text/html');
     }
     const disc = /^\/discount\/([^/]+)$/.exec(path);
     if (disc) { res.writeHead(302, { location: url.searchParams.get('redirect') ?? '/' }); return res.end(); }

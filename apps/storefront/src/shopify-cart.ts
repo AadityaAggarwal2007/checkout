@@ -72,5 +72,6 @@ export const cartApi = {
     call<unknown>('cart/add.js', { items: [{ id: Number(variantId), quantity, properties }] }),
   change: (key: string, quantity: number) => call<ShopifyCart>('cart/change.js', { id: key, quantity }),
   note: (note: string) => call<ShopifyCart>('cart/update.js', { note }),
+  clear: () => call<ShopifyCart>('cart/clear.js', {}),
   product: (handle: string) => call<ShopifyProductJson>(`products/${encodeURIComponent(handle)}.js`),
 };

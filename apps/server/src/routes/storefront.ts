@@ -9,6 +9,7 @@ import { readFile } from 'node:fs/promises';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { badRequest, notFound } from '../lib/errors.js';
 import { normaliseShop } from '../lib/shopify.js';
+import { isTestKey } from '../checkout/service.js';
 import { toCoreCoupon } from '../rules/coupons.js';
 
 /**
@@ -76,10 +77,11 @@ export function storefrontRoutes(app: FastifyInstance): void {
       select: { code: true, title: true },
       take: 20,
     });
-    // Our checkout once the merchant switched it on; before that only for ?ck_test=1 (merchant testing).
+    // Our checkout once the merchant switched it on; before that only with the merchant's test link.
     const { test } = req.query as { test?: string };
     const settings = await prisma.storeSettings.findUnique({ where: { storeId: store.id } });
-    const popup = settings?.checkoutEnabled || test === '1';
+    const testing = isTestKey(app.deps.env.HASH_PEPPER, store.id, test);
+    const popup = settings?.checkoutEnabled || testing;
     const body: StorefrontConfig = {
       storeName: store.name,
       version: drawer?.version ?? 0,
@@ -91,7 +93,7 @@ export function storefrontRoutes(app: FastifyInstance): void {
     void prisma.shopifyConnection
       .updateMany({ where: { storeId: store.id, OR: [{ embedSeenAt: null }, { embedSeenAt: { lt: new Date(Date.now() - 60_000) } }] }, data: { embedSeenAt: new Date() } })
       .catch(() => undefined);
-    return open(reply).header('cache-control', test === '1' ? 'no-store' : 'public, max-age=30').send(body);
+    return open(reply).header('cache-control', testing ? 'no-store' : 'public, max-age=30').send(body);
   });
 
   app.post('/storefront/price', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (req, reply) => {

@@ -2,6 +2,7 @@ import type { CheckoutState } from '@checkout/shared';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DEMO, seedDemo } from '../src/dev/seed.js';
+import { testKeyFor } from '../src/checkout/service.js';
 import { GatewayRegistry } from '../src/payments/registry.js';
 import type { Gateway } from '../src/payments/types.js';
 import { env, fakeOrderSink, keyring, makeApp, otpOutbox, prisma, resetDb } from './helpers.js';
@@ -96,10 +97,13 @@ describe('creating a checkout', () => {
   it('is refused while the store has not switched it on, unless testing', async () => {
     await prisma.storeSettings.update({ where: { storeId }, data: { checkoutEnabled: false } });
     expect((await start()).statusCode).toBe(403);
-    expect((await start(undefined, `key=${DEMO.widgetKey}&test=1`)).statusCode).toBe(200);
-    const cfg = await app.inject({ method: 'GET', url: `/storefront/config?key=${DEMO.widgetKey}` });
+    // Guessing a test link does not work; the merchant's one does.
+    expect((await start(undefined, `key=${DEMO.widgetKey}&test=1`)).statusCode).toBe(403);
+    const key = testKeyFor(env.HASH_PEPPER, storeId);
+    expect((await start(undefined, `key=${DEMO.widgetKey}&test=${key}`)).statusCode).toBe(200);
+    const cfg = await app.inject({ method: 'GET', url: `/storefront/config?key=${DEMO.widgetKey}&test=1` });
     expect(cfg.json().checkout.mode).toBe('shopify');
-    const test = await app.inject({ method: 'GET', url: `/storefront/config?key=${DEMO.widgetKey}&test=1` });
+    const test = await app.inject({ method: 'GET', url: `/storefront/config?key=${DEMO.widgetKey}&test=${key}` });
     expect(test.json().checkout).toEqual({ mode: 'popup', url: env.PUBLIC_URL });
   });
 

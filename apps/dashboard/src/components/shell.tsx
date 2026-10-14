@@ -7,16 +7,16 @@ import { StoreContext, type StoreInfo } from '@/lib/store-context';
 
 const NAV: Array<{ href: string; label: string; icon: string; soon?: string }> = [
   { href: '', label: 'Dashboard', icon: '▦' },
-  { href: '/orders', label: 'Orders', icon: '◫', soon: 'Phase 2' },
+  { href: '/orders', label: 'Orders', icon: '◫' },
   { href: '/abandoned', label: 'Abandoned checkouts', icon: '⊘', soon: 'Phase 5' },
   { href: '/cart-drawer', label: 'Cart drawer', icon: '⊞' },
-  { href: '/checkout-design', label: 'Checkout design', icon: '✎', soon: 'Phase 2' },
+  { href: '/checkout-design', label: 'Checkout design', icon: '✎', soon: 'Phase 4' },
   { href: '/coupons', label: 'Coupons', icon: '%', soon: 'Phase 3' },
   { href: '/payment-offers', label: 'Payment offers', icon: '₹', soon: 'Phase 3' },
   { href: '/upsell', label: 'Upsell', icon: '↗', soon: 'Phase 4' },
-  { href: '/shipping', label: 'Shipping', icon: '⛟', soon: 'Phase 2' },
+  { href: '/shipping', label: 'Shipping', icon: '⛟' },
   { href: '/rto', label: 'RTO suite', icon: '⛨', soon: 'Phase 4' },
-  { href: '/settings', label: 'Settings', icon: '⚙', soon: 'Phase 2' },
+  { href: '/settings', label: 'Settings · Payments', icon: '⚙' },
 ];
 
 export function StoreShell({ storeId, children }: { storeId: string; children: ReactNode }) {

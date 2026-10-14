@@ -9,7 +9,7 @@ import {
 } from '@checkout/shared';
 import { Prisma, type CheckoutSession, type Customer, type PaymentTransaction, type Store } from '@prisma/client';
 import type { Deps } from '../context.js';
-import { randomToken } from '../lib/crypto.js';
+import { pepperedHash, randomToken, safeEqual } from '../lib/crypto.js';
 import { HttpError, badRequest, conflict, notFound } from '../lib/errors.js';
 import { createOrder, modeOf, pushOrderToShopify, type OrderDraft } from '../orders/create.js';
 import { buildCart } from './rules.js';
@@ -34,6 +34,18 @@ export function storeOrigins(store: Store): string[] {
     out.add(`https://${store.domain.startsWith('www.') ? store.domain.slice(4) : `www.${store.domain}`}`);
   }
   return [...out];
+}
+
+/**
+ * Merchant test link (?ck_test=<key>): our checkout on the live store for whoever has the link, before
+ * it is switched on for everyone. The key is derived from the store id, shown only in the dashboard.
+ */
+export function testKeyFor(pepper: string, storeId: string): string {
+  return pepperedHash(pepper, `cktest:${storeId}`).slice(0, 20);
+}
+
+export function isTestKey(pepper: string, storeId: string, given: unknown): boolean {
+  return typeof given === 'string' && given.length === 20 && safeEqual(given, testKeyFor(pepper, storeId));
 }
 
 const STEP_RANK = { CART: 0, LOGIN: 1, ADDRESS: 2, PAYMENT: 3, PROCESSING: 4, COMPLETED: 5 } as const;
@@ -90,6 +102,9 @@ export class CheckoutService {
       session.customerId = customer.id;
       session.contactPhone = customer.phone;
       session.address = null;
+      // Remembered shopper: their default address is chosen for them (one click to pay).
+      const saved = await this.prisma.customerAddress.findFirst({ where: { customerId: customer.id, deletedAt: null, isDefault: true } });
+      if (saved) await this.chooseAddress(session, customer, { addressId: saved.id });
     }
     return customer;
   }

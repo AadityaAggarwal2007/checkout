@@ -8,6 +8,6 @@ const prisma = new PrismaClient();
 const rows = await prisma.$queryRaw<{ tablename: string }[]>`
   SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
 await prisma.$executeRawUnsafe(`TRUNCATE ${rows.map((r) => `"${r.tablename}"`).join(', ')} RESTART IDENTITY CASCADE`);
-await seedDemo(prisma);
+await seedDemo(prisma, { localCheckout: true, domain: new URL(process.env.DEV_STORE_URL ?? 'http://localhost:5004').host });
 await prisma.$disconnect();
 console.log('e2e database reset and seeded');

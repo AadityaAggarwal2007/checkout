@@ -14,5 +14,10 @@
     "@checkout/core": "*",
     "zod": "3.23.8"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./india": "./src/india.ts",
+    "./payments": "./src/payments.ts"
+  }
 }

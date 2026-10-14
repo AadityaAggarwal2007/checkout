@@ -18,6 +18,11 @@ const serverEnv = {
   DEV_CATALOG_FILE: '../devstore/catalog.json',
   DEV_STORE_URL: 'http://localhost:5104',
   STOREFRONT_DIST: '../storefront/dist/loader.js',
+  CHECKOUT_DIST: '../checkout/dist',
+  OTP_SENDER: 'dev',
+  DEV_GATEWAY: '1',
+  ORDER_SINK: 'dev',
+  PINCODE_LOOKUP: 'dev',
 };
 
 export default defineConfig({

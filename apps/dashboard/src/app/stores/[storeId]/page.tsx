@@ -1,7 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useStore } from '@/lib/store-context';
+import { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/toast';
+import { api } from '@/lib/api';
 
 export default function Overview() {
   const { store } = useStore();
@@ -17,7 +19,7 @@ export default function Overview() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Cart drawer" value={live ? 'Live on your store' : 'Not seen yet'} tone={live ? 'ok' : 'warn'} />
         <Stat label="Shopify" value={store.shopify && !store.shopify.uninstalledAt ? 'Connected' : 'Not connected'} tone={store.shopify && !store.shopify.uninstalledAt ? 'ok' : 'warn'} />
-        <Stat label="Checkout" value="Coming in Phase 2" tone="muted" />
+        <CheckoutStat storeId={store.id} />
       </div>
       <section className="card p-5">
         <h2 className="font-semibold">Turn the drawer on</h2>
@@ -42,6 +44,18 @@ export default function Overview() {
         <span className="text-xl">→</span>
       </Link>
     </div>
+  );
+}
+
+function CheckoutStat({ storeId }: { storeId: string }) {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    api<{ settings: { checkoutEnabled: boolean } }>(`/api/stores/${storeId}/payments`).then((r) => setOn(r.settings.checkoutEnabled), () => setOn(null));
+  }, [storeId]);
+  return (
+    <Link href={`/stores/${storeId}/settings/payments`}>
+      <Stat label="Checkout" value={on === null ? 'Settings → Payments' : on ? 'On for shoppers' : 'Off (Shopify checkout)'} tone={on ? 'ok' : 'muted'} />
+    </Link>
   );
 }
 

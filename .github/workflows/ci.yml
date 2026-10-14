@@ -32,6 +32,8 @@ jobs:
       - run: npm test
       - name: Storefront bundle (size budget)
         run: npm run build:storefront
+      - name: Checkout page bundle (size budget)
+        run: npm run build:checkout
       - name: Dashboard production build
         run: npx next build
         working-directory: apps/dashboard

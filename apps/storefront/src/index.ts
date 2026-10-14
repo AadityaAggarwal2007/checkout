@@ -1,4 +1,5 @@
 import { serverApi } from './api.js';
+import { CheckoutFrame } from './checkout-frame.js';
 import { Drawer } from './drawer.js';
 import { startPreview } from './preview.js';
 import { cartApi, nativeFetch, setNativeFetch } from './shopify-cart.js';
@@ -28,7 +29,7 @@ declare global {
   const key = script.dataset.key ?? src.searchParams.get('key');
   const shop = script.dataset.shop;
   if (!key && !shop) return;
-  const api = serverApi(src.origin, key ? { key } : { shop: shop! });
+  const api = serverApi(src.origin, key ? { key } : { shop: shop! }, testMode());
   const storeKey = key ?? shop!;
   // Keep the original fetch for our own calls before wrapping the page's fetch.
   setNativeFetch(window.fetch.bind(window));
@@ -42,12 +43,22 @@ declare global {
       return; // our server is down: the theme's own cart keeps working
     }
     const countClass = (window as { __ckCartCountClass?: string }).__ckCartCountClass || config.drawer.settings.cartCountClass;
-    const drawer = new Drawer({
+    let frame: CheckoutFrame | undefined;
+    const drawer: Drawer = new Drawer({
       config,
       api,
       storeKey,
       onCount: (n) => updateThemeCount(countClass, n),
+      onCheckout: (lines, codes, note) => {
+        drawer.close();
+        void frame?.open(lines, { codes, note, source: 'cart' });
+      },
     });
+    if (config.checkout.mode === 'popup') {
+      frame = new CheckoutFrame(api, config.checkout.url, () => void drawer.refresh().catch(() => undefined));
+      captureCheckoutButtons(frame, () => drawer.store.state.codes);
+      afterReturn(frame, () => void drawer.refresh().catch(() => undefined));
+    }
     window.CheckoutDrawer = { open: () => drawer.open(), close: () => drawer.close(), refresh: () => drawer.refresh() };
     const openAfterAdd = () => (config.drawer.settings.openOnAdd ? drawer.open() : void drawer.refresh());
     captureForms(openAfterAdd);
@@ -60,6 +71,56 @@ declare global {
   else void start();
 })();
 
+/** ?ck_test=<key> once on the store (the merchant's test link) = our checkout in this tab before it is switched on. */
+function testMode(): string | undefined {
+  try {
+    const key = new URLSearchParams(location.search).get('ck_test');
+    if (key && /^[\w-]{1,40}$/.test(key)) sessionStorage.setItem('ck_test', key);
+    return sessionStorage.getItem('ck_test') ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Theme cart page "Check out", links to /checkout and "Buy it now" open our checkout instead. */
+function captureCheckoutButtons(frame: CheckoutFrame, codes: () => string[]): void {
+  const fromCart = async () => {
+    const cart = await cartApi.get();
+    void frame.open(cart.items.map((i) => ({ variantId: String(i.id), quantity: i.quantity })), { codes: codes(), note: cart.note ?? '', source: 'cart' });
+  };
+  document.addEventListener(
+    'click',
+    (e) => {
+      const el = (e.target as Element | null)?.closest?.('button[name="checkout"],input[name="checkout"],a[href="/checkout"],a[href$="/checkout"],.shopify-payment-button__button--unbranded');
+      if (!el) return;
+      const productForm = el.closest('form[action*="/cart/add"]') as HTMLFormElement | null;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (productForm) {
+        // Buy it now: just this variant and quantity, the cart is left alone.
+        const data = new FormData(productForm);
+        const variantId = String(data.get('id') ?? '');
+        const quantity = Math.max(1, Number(data.get('quantity') ?? 1) || 1);
+        if (/^\d+$/.test(variantId)) void frame.open([{ variantId, quantity }], { source: 'buy_now' });
+        return;
+      }
+      void fromCart();
+    },
+    true,
+  );
+}
+
+/** Back on the store after paying on a phone: #ck_done = order placed (empty the cart), #ck_resume = try again. */
+function afterReturn(frame: CheckoutFrame, refresh: () => void): void {
+  const hash = location.hash;
+  if (hash === '#ck_done') {
+    void cartApi.clear().catch(() => undefined).then(refresh);
+  } else if (hash.startsWith('#ck_resume=')) {
+    frame.resume(decodeURIComponent(hash.slice('#ck_resume='.length)));
+  } else return;
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
 const ADD = /\/cart\/add(\.js)?(\?|$)/;
 const CHANGE = /\/cart\/(change|update|clear)(\.js)?(\?|$)/;
 
@@ -69,7 +130,7 @@ function captureForms(after: () => void): void {
     (e) => {
       const form = e.target as HTMLFormElement | null;
       if (!form || form.method.toLowerCase() !== 'post' || !ADD.test(form.action)) return;
-      // "Buy it now" posts with a checkout flag: leave it to Shopify (our popup takes it in Phase 2).
+      // "Buy it now" posts with a checkout flag: Shopify's checkout, or ours (captureCheckoutButtons) in popup mode.
       if ((e as SubmitEvent).submitter?.getAttribute('name') === 'checkout') return;
       e.preventDefault();
       e.stopImmediatePropagation();

@@ -50,3 +50,34 @@ export const METHOD_LABELS: Record<string, string> = {
   cod: 'Cash on delivery',
   partial_cod: 'Pay part now, rest on delivery',
 };
+
+/** Settings > Payments: COD, partial COD and the checkout switch (amounts in paise). */
+export interface PaymentSettings {
+  checkoutEnabled: boolean;
+  codEnabled: boolean;
+  codFee: number;
+  codConfirmPopup: boolean;
+  partialCod: { enabled: boolean; type: 'fixed' | 'percent'; amount: number; percent: number; min: number | null; max: number | null };
+}
+
+export interface GatewayView {
+  provider: GatewayProviderKey;
+  name: string;
+  mode: 'test' | 'live';
+  active: boolean;
+  /** Non-secret fields as saved; secret fields only say whether they are set. */
+  publicInfo: Record<string, string>;
+  secretsSet: string[];
+  /** Where to point the gateway's webhook / notification URL. */
+  webhookUrl: string;
+}
+
+export interface PaymentsResponse {
+  settings: PaymentSettings;
+  gateways: GatewayView[];
+  /** online method -> provider */
+  routes: Record<string, GatewayProviderKey>;
+  available: GatewayProviderKey[];
+  /** For the merchant's test link: <store>/?ck_test=<testKey> (our checkout before it is switched on). */
+  testKey: string;
+}

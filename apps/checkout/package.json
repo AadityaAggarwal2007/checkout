@@ -1,0 +1,19 @@
+{
+  "name": "@checkout/checkout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The checkout page shown in an iframe: WhatsApp OTP login, address, payment, thank-you.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@checkout/core": "*",
+    "@checkout/shared": "*"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}

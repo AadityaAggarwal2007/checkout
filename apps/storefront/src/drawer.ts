@@ -15,6 +15,8 @@ export interface DrawerOptions {
   preview?: boolean;
   /** Called when the cart count changes (to update the theme's own badge). */
   onCount?: (count: number) => void;
+  /** Popup mode: open our checkout for these lines (index.ts owns the iframe). */
+  onCheckout?: (lines: Array<{ variantId: string; quantity: number }>, codes: string[], note: string) => void;
   /** Preview only: the cart to show instead of the store's. */
   sampleCart?: ShopifyCart;
 }
@@ -199,11 +201,13 @@ export class Drawer {
         return;
       }
       if (this.opts.preview) return;
-      if (s.config.checkout.mode === 'shopify') {
-        const code = s.codes[0];
-        window.location.href = code ? `/discount/${encodeURIComponent(code)}?redirect=/checkout` : '/checkout';
+      if (s.config.checkout.mode === 'popup' && this.opts.onCheckout && s.cart) {
+        const lines = s.cart.items.map((i) => ({ variantId: String(i.id), quantity: i.quantity }));
+        this.opts.onCheckout(lines, s.codes, s.note);
+        return;
       }
-      // 'popup' mode is opened by the checkout module (Phase 2).
+      const code = s.codes[0];
+      window.location.href = code ? `/discount/${encodeURIComponent(code)}?redirect=/checkout` : '/checkout';
     },
   };
 
