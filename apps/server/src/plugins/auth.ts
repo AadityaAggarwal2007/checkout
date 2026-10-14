@@ -38,7 +38,7 @@ export async function setSession(reply: FastifyReply, userId: string, tokenVersi
   const token = await tokens.sign('session', { sub: userId, tv: tokenVersion }, SESSION_TTL_SECONDS);
   reply.setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
+    secure: env.PUBLIC_URL.startsWith('https:'), // every https server, the demo too
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_TTL_SECONDS,

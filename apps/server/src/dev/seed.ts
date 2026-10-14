@@ -20,11 +20,16 @@ export const DEMO = {
  * localCheckout: also switch our checkout on with the local test gateway (local runs and e2e only;
  * the test gateway works only on a server started with DEV_GATEWAY=1).
  */
-export async function seedDemo(prisma: PrismaClient, opts: { localCheckout?: boolean; domain?: string } = {}): Promise<{ storeId: string; userId: string }> {
+export async function seedDemo(
+  prisma: PrismaClient,
+  opts: { localCheckout?: boolean; domain?: string; email?: string; password?: string } = {},
+): Promise<{ storeId: string; userId: string }> {
   const domain = opts.domain ?? 'localhost:5004';
+  // A demo on a public server gets its own login (deploy/install.sh), never the well-known local one.
+  const email = opts.email ?? DEMO.email;
   const user = await prisma.user.upsert({
-    where: { email: DEMO.email },
-    create: { email: DEMO.email, name: 'Local Owner', passwordHash: await hashPassword(DEMO.password) },
+    where: { email },
+    create: { email, name: 'Demo Owner', passwordHash: await hashPassword(opts.password ?? DEMO.password) },
     update: {},
   });
   const store = await prisma.store.upsert({

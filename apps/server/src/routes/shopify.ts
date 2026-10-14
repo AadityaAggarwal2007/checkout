@@ -19,7 +19,7 @@ export function shopifyRoutes(app: FastifyInstance): void {
     const state = await tokens.sign('oauth_state', { shop, nonce }, 600);
     reply.setCookie(OAUTH_COOKIE, nonce, {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
+      secure: env.PUBLIC_URL.startsWith('https:'), // every https server, the demo too
       sameSite: 'lax',
       path: '/shopify',
       maxAge: 600,
