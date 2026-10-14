@@ -78,7 +78,7 @@ if command -v ss >/dev/null; then
 fi
 if [ "$SKIP_NGINX" != 1 ] && [ -d /etc/nginx ]; then
   for d in $DOMAIN $DEMO_DOMAIN; do
-    other=$(grep -rlsw "server_name.*$d" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -v '/checkout.conf$' || true)
+    other=$(grep -Rlsw "server_name.*$d" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | grep -v '/checkout.conf$' || true)
     if [ -n "$REPLACE_SITE" ]; then other=$(echo "$other" | grep -vx "/etc/nginx/sites-enabled/$REPLACE_SITE" || true); fi
     [ -z "$other" ] || die "$d is already served by another nginx site ($other). Use another subdomain, or --replace-site <name> if that site should step aside."
   done
