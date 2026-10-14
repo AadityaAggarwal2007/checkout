@@ -425,7 +425,71 @@ C18-20 SHOPIFY SETTINGS > APPS > FlexyCart "by FlexyPe": installed 1 week ago; y
 
 ### (c) On the Shopify storefront
 
-_(later)_
+Source: 19 screenshots (2026-10-14 12:31-12:32) of kurtiya.shop on a desktop browser: product page → cart drawer →
+checkout popup → PayGlocal. Structure only (the test shopper's name / phone / address on screen were NOT copied).
+
+**How it flows**
+1. Product page is the theme's own. "Add to cart" opens the drawer; "Buy it now" skips the cart.
+2. Checkout is a POPUP over the store ("Creating your order…" first), never a new page. Desktop = 2 columns (summary,
+   address, gifts, upsell on the left; payment on the right). Automatic coupon pops with confetti.
+3. Pay opens the gateway in a new tab; the store tab shows "Processing payment… Retry payment" and polls the status.
+4. Rules live everywhere at once: B1G1 groups pairs in the cart, free gifts drop in as "Free Gift" lines when a tier is
+   reached, the reward bar moves, "You saved ₹x" updates.
+
+**Screen by screen**
+
+```text
+S01 PRODUCT PAGE (desktop, theme's own): variant pickers (colour swatches, pack size), quantity, "Add to cart" (outline) and
+   "⚡ Buy it now" (black). Theme blocks: rating badge, "BUY 1 GET 1 FREE" offer card, chat bubble (ShipTrack widget).
+S02 "BUY IT NOW" → centred white MODAL over the store: "Creating your order..." + spinner logo + "Powered by FlexyPe"
+   (skips the cart; checkout for that one variant). Sticky bottom bar on the product page: image, title, variant select
+   with price, qty, Add to cart.
+S03 CHECKOUT MODAL (desktop = 2 columns inside the popup; store logo top, ✕ close):
+   LEFT: banner carousel (purple, ‹ ›); ORDER SUMMARY "• 1 item · Saved ₹481" (expand ˅) + Grand Total; DELIVERY ADDRESS card
+   (name + tag HOME, address, phone, email, change); shipping line "Free shipping"; FREE GIFTS FOR YOU: carousel of gift
+   cards (image, title, struck price → "Free", Add button disabled, progress bar + 🔒 "Add items worth ₹175.00 or more in the
+   cart to unlock this offer"); footer "T&C | Privacy", "Powered by FlexyPe".
+   RIGHT: payment card "₹147.80 · Pay via UPI" + UPI app icons; "+91 phone · Not you?".
+   On open an "Automatic coupon applied! You just saved ₹x on this order!" popup with CONFETTI + "Woohoo! Thanks".
+   (Logged-in returning shopper: address already filled → straight to payment = one-click.)
+S04 CART DRAWER (right side, full height): "Your cart (1)" ✕; announcement strip; reward bar "You're ₹75.00 away" with
+   milestones (free shipping, Free gift's ×3); ORDER SUMMARY: item image + qty badge, title, VARIANT DROPDOWN inside the cart
+   (change Silver / pack-of-3 without leaving), − qty +, delete, ₹599 struck → ₹117.80, "80% Off"; Coupons › + "You saved
+   ₹6.20 on this order 🎉"; Products you may like (cards + Add); T&C checkbox; "₹117.80 Estimated total"; "⚡ Checkout";
+   payment logos; "Secured by FlexyPe". Page behind is dimmed.
+S05 B1G1 IN THE CART: adding a 2nd unit → group box "✓ B1G1 applied!" with both lines; one shows "₹1,198 struck · Free",
+   the other ₹124 "90% Off"; reward bar moves (free shipping reached); "You saved ₹124.00 on this order 🎉".
+S06 Cart with 3 units: one B1G1 pair (free + paid) grouped, the 3rd unit alone at full sale price; reward bar shows the 2nd
+   milestone reached, "You're ₹127 away" from the next. (B1G1 pairs units one by one.)
+S07 Cart (8): every pair gets its own "B1G1 applied!" box; reward bar "Congrats! You achieved this tier" (all reached).
+S08 FREE GIFTS ADDED AUTOMATICALLY as cart lines when tiers are reached: gift lines with chip "🎁 Free Gift", struck price →
+   "Free", no qty / delete controls; "You saved ₹1,195.00 on this order 🎉" (savings include gifts).
+S09-10 Upsell carousel with ‹ › arrows; "✎ Add instructions" (note); T&C checkbox; total; Checkout.
+   NOTE: the announcement strip rotates every few seconds (Free shipping above ₹999 / Fast delivery 6-7 days / B1G1).
+S11 COUPONS in the cart = BOTTOM SHEET "Apply Discount Code": input + Apply, and chips of the visible codes (B1G1,
+   FREEGIFT599, FREEGIFT499, FREEGIFT299) to tap.
+S12-13 cart scrolled (announcement strip scrolls like a marquee between messages).
+S14 CHECKOUT from the cart → same "Creating your order..." modal (cart badge on the theme's bag icon shows the count).
+S15 CHECKOUT MODAL for 8 items: Order summary "• 8 items · Saved ₹3,570" + Grand total; Delivery address card with "✎ Edit";
+   shipping line "Free shipping · Free"; savings card "You saved ₹1,195 on this order · View all coupons ›";
+   "MOST LIKED ✨" upsell block with a COUNTDOWN "⏱ 2m:59s" (the upsell timer) and product cards with variant text; confetti
+   again on open; right side payment "₹372.00 Pay via UPI".
+   NOTE: "Saved ₹3,570" (summary, includes compare-at) differs from "You saved ₹1,195" (coupon card) — two different
+   savings numbers on one screen; we should show ONE clear number (or label both).
+S16-17 Checkout modal scrolled: the summary chip alternates "Saved ₹3,570" / "🎁 Free Gift"; upsell cards: image, title,
+   variant text, struck price → price, "10% Off", "View (4 options)" for products with variants; timer counts down
+   (2m:58s → 2m:56s); "T&C | Privacy" links.
+S18 PAY: the gateway page opens in a NEW TAB; the checkout modal shows "Processing Payment — Hold on while we are getting
+   your transaction details" + rupee coin animation + "If you are unable to complete payment, you can Retry payment" +
+   "Do not refresh or close this page until your transaction completes" (the original tab POLLS the payment status).
+S19 PAYGLOCAL hosted page (api.payglocal.com/gl/payflow-ui): left blue panel = merchant logo + legal entity name, "PAYING
+   ₹372.00 INR", security logos (PCI DSS, Verified by Visa, MasterCard SecureCode, SafeKey); right = "Complete your payment":
+   UPI (Generate QR), Credit or debit card, NetBanking (+32 banks); "Powered by PayGlocal".
+   => The shopper never leaves the store tab; result comes back by polling (and the gateway callback), not by trusting a
+   redirect. Same pattern for us (it also closes problem 1: verify with the gateway before "paid").
+NOT SEEN: phone (mobile) layout of drawer / checkout, the address entry for a NEW shopper (phone step), COD flow, the
+   thank-you screen after payment, a failed payment.
+```
 
 ## Database design
 
