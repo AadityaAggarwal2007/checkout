@@ -15,6 +15,7 @@ import { createOrder, modeOf, pushOrderToShopify, type OrderDraft } from '../ord
 import { shopperCard } from '../rules/coupons.js';
 import { buildCart, shopperOf } from './rules.js';
 import { couponStateOf, loadPricingContext, priceSession, type PricingContext, type SessionAddress, type SessionPricing } from './pricing.js';
+import { ourMethod } from '../payments/types.js';
 import { customerForDevice } from './otp.js';
 import { liveRules, offerOf, pickRule, upsellStateOf, UPSELL_PREFIX, withUpsellPrices, type UpsellState } from './upsell.js';
 
@@ -96,7 +97,8 @@ export class CheckoutService {
   async customerOf(session: SessionWithStore, deviceToken: string | undefined): Promise<Customer | null> {
     const customer = await customerForDevice(this.prisma, session.storeId, deviceToken);
     if (!customer) return null;
-    if (session.customerId !== customer.id && !session.completedAt) {
+    // Never while a payment is open: the paid order must stay with the shopper who started it.
+    if (session.customerId !== customer.id && !session.completedAt && session.status !== 'PAYING') {
       await this.prisma.checkoutSession.update({
         where: { id: session.id },
         data: { customerId: customer.id, contactPhone: customer.phone, address: Prisma.DbNull, step: furthest(session.step, 'ADDRESS') },
@@ -549,16 +551,29 @@ export class CheckoutService {
       await this.reopen(txn.sessionId);
       return 'failed';
     }
+    if (status.state === 'success' && status.amount === undefined) {
+      // "Paid" only with the amount confirmed: without it a person checks (the check fails closed).
+      await this.prisma.paymentTransaction.update({ where: { id: txn.id }, data: { raw: { ...(raw as object), problem: 'gateway said success without an amount: check by hand' } as Prisma.InputJsonValue } });
+      return 'pending';
+    }
     if (status.state === 'failed') {
       const changed = await this.prisma.paymentTransaction.updateMany({ where: { id: txn.id, status: { in: ['CREATED', 'PENDING'] } }, data: { status: 'FAILED', raw, gatewayRef: status.gatewayRef ?? txn.gatewayRef } });
       if (changed.count) await this.reopen(txn.sessionId);
       return 'failed';
     }
-    await this.prisma.paymentTransaction.updateMany({
+    // Paid another way than chosen (the gateway page offered more methods): the order is placed (the money
+    // is in) but flagged, because an offer for the chosen method may not apply to the one used.
+    const used = ourMethod(status.method);
+    const mismatch = used && txn.method && txn.method !== 'partial_cod' && used !== txn.method ? `Paid by ${used.toUpperCase()}, but ${txn.method.toUpperCase()} was chosen: check method offers on this order.` : null;
+    const changed = await this.prisma.paymentTransaction.updateMany({
       where: { id: txn.id, status: { in: ['CREATED', 'PENDING'] } },
-      data: { status: 'SUCCESS', verifiedAt: new Date(), raw, gatewayRef: status.gatewayRef ?? txn.gatewayRef, method: txn.method },
+      data: { status: 'SUCCESS', verifiedAt: new Date(), raw: mismatch ? ({ ...(raw as object), problem: mismatch } as Prisma.InputJsonValue) : raw, gatewayRef: status.gatewayRef ?? txn.gatewayRef, method: txn.method },
     });
     await this.placePaidOrder(txn);
+    if (mismatch && changed.count) {
+      const order = await this.prisma.order.findUnique({ where: { sessionId: txn.sessionId }, select: { id: true, note: true } });
+      if (order) await this.prisma.order.update({ where: { id: order.id }, data: { note: `⚠ ${mismatch}${order.note ? `\n${order.note}` : ''}` } });
+    }
     return 'success';
   }
 

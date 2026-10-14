@@ -61,6 +61,8 @@ Started 2026-10-14. This file is the memory of the planning. Every new session r
   Checkout design page with live preview.
 - 2026-10-14 Phase 5 done: dashboard home numbers + funnel, abandoned checkouts, Meta Pixel, team, API keys,
   activity log.
+- 2026-10-14 Owner: no Billing for now ("abhi sirf team ko chaia"): the checkout is for his own team first.
+  Phase 6 done without it: go-live checklist, security review + fixes, load test.
 - 2026-10-14 Owner: the checkout goes on **merchantbuild.in** (demo store on demo.merchantbuild.in); Shopify Builder
   steps aside there (only its nginx link is removed; app, code, database kept; `deploy/restore-site.sh` undoes it).
   VPS install: `docs/VPS.md`, `deploy/install.sh`; updates by GitHub "Deploy to VPS" with a key that can only run

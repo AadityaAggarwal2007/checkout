@@ -20,6 +20,19 @@ export type GatewayStart =
   | { kind: 'redirect'; url: string; gatewayRef?: string }
   | { kind: 'post'; url: string; fields: Record<string, string>; gatewayRef?: string };
 
+/** The gateway's name for how the shopper paid (PayU "mode", PayGlocal "paymentMethod") as our method; unknown = undefined. */
+export function ourMethod(gatewayMethod: string | undefined): string | undefined {
+  const m = (gatewayMethod ?? '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!m) return undefined;
+  if (m === 'UPI' || m.startsWith('UPI')) return 'upi';
+  if (m === 'CC' || m === 'DC' || m.includes('CARD')) return 'card';
+  if (m === 'NB' || m.includes('NETBANKING')) return 'netbanking';
+  if (m === 'CASH' || m.includes('WALLET')) return 'wallet';
+  if (m.includes('EMI')) return 'emi';
+  if (m === 'BNPL' || m.includes('PAYLATER')) return 'pay_later';
+  return undefined;
+}
+
 export interface GatewayStatus {
   state: 'success' | 'failed' | 'pending';
   /** Amount the gateway says was collected, paise (when it says). */

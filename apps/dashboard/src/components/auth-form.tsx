@@ -14,7 +14,8 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const next = params.get('next');
-  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/stores';
+  // Only our own pages: "//x" and "/\x" would leave the site.
+  const safeNext = next && /^\/(?![/\\])/.test(next) ? next : '/stores';
 
   async function submit(e: FormEvent) {
     e.preventDefault();
