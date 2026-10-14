@@ -40,6 +40,17 @@ export function storeRoutes(app: FastifyInstance): void {
     };
   });
 
+  /** Collection picker in the dashboard (coupon scopes). */
+  app.get('/api/stores/:storeId/collections', { preHandler: requireStore('VIEWER') }, async (req) => {
+    const { storeId } = req.params as { storeId: string };
+    const { q = '', ids } = req.query as { q?: string; ids?: string };
+    const collections = await app.deps.catalog.collections(
+      storeId,
+      ids !== undefined ? { ids: ids.split(',').filter((x) => /^\d+$/.test(x)).slice(0, 50) } : { query: String(q).slice(0, 80) },
+    );
+    return { collections };
+  });
+
   /**
    * After a Shopify install the merchant may not be logged in to our dashboard yet. The OAuth
    * callback hands out a short signed "claim" token; once logged in (or signed up) the dashboard

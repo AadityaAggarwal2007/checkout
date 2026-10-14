@@ -12,6 +12,7 @@ import type { Deps } from '../context.js';
 import { pepperedHash, randomToken, safeEqual } from '../lib/crypto.js';
 import { HttpError, badRequest, conflict, notFound } from '../lib/errors.js';
 import { createOrder, modeOf, pushOrderToShopify, type OrderDraft } from '../orders/create.js';
+import { shopperCard } from '../rules/coupons.js';
 import { buildCart } from './rules.js';
 import { couponStateOf, loadPricingContext, priceSession, type PricingContext, type SessionAddress, type SessionPricing } from './pricing.js';
 import { customerForDevice } from './otp.js';
@@ -138,9 +139,8 @@ export class CheckoutService {
       ? await this.prisma.customerAddress.findMany({ where: { customerId: customer.id, deletedAt: null }, orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }], take: 10 })
       : [];
     const visible = await this.prisma.coupon.findMany({
-      where: { storeId: session.storeId, active: true, visible: true, deletedAt: null, code: { not: null } },
+      where: { storeId: session.storeId, active: true, visible: true, deletedAt: null, code: { not: null }, kind: { not: 'PAYMENT_OFFER' } },
       orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
-      select: { code: true, title: true },
       take: 20,
     });
 
@@ -221,7 +221,7 @@ export class CheckoutService {
       coupons: {
         applied: p.applied.map((a) => ({ code: a.code, title: a.title, amount: a.amount, automatic: a.automatic })),
         rejected: p.rejected.map((r) => ({ code: r.code, message: r.message })),
-        visible: visible.map((c) => ({ code: c.code!, title: c.title ?? undefined })),
+        visible: visible.map(shopperCard),
       },
       methods: priced.methods,
       codReasons: p.codAvailability.reasons,

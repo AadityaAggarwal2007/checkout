@@ -131,7 +131,7 @@ export interface CheckoutState {
     savings: number;
     itemCount: number;
   };
-  coupons: { applied: Array<{ code?: string; title?: string; amount: number; automatic: boolean }>; rejected: Array<{ code: string; message: string }>; visible: Array<{ code: string; title?: string }> };
+  coupons: { applied: Array<{ code?: string; title?: string; amount: number; automatic: boolean }>; rejected: Array<{ code: string; message: string }>; visible: Array<{ code: string; title?: string; details?: string[] }> };
   methods: CheckoutMethod[];
   /** Why COD is not offered (shown under the list). */
   codReasons: string[];

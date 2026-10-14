@@ -6,6 +6,7 @@ import type { Deps } from './context.js';
 import { HttpError } from './lib/errors.js';
 import { authRoutes } from './routes/auth.js';
 import { checkoutRoutes } from './routes/checkout.js';
+import { couponRoutes } from './routes/coupons.js';
 import { drawerRoutes } from './routes/drawers.js';
 import { healthRoutes } from './routes/health.js';
 import { orderRoutes } from './routes/orders.js';
@@ -78,6 +79,7 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   shopifyRoutes(app);
   drawerRoutes(app);
   paymentRoutes(app);
+  couponRoutes(app);
   shippingRoutes(app);
   orderRoutes(app);
   storefrontRoutes(app);

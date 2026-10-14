@@ -24,6 +24,12 @@ export interface CatalogProduct {
   variants: CatalogVariant[];
 }
 
+export interface CatalogCollection {
+  collectionId: string;
+  title: string;
+  image?: string;
+}
+
 /** Where prices come from. The server never trusts prices sent by a browser. */
 export interface Catalog {
   /** fresh = skip any cache (used right before payment). */
@@ -31,7 +37,9 @@ export interface Catalog {
   products(storeId: string, productIds: string[]): Promise<CatalogProduct[]>;
   /** Dashboard product picker: title search, first 20. */
   search(storeId: string, query: string): Promise<CatalogProduct[]>;
+  /** Dashboard collection picker: by title search (first 20) or by ids. */
+  collections(storeId: string, opts: { query?: string; ids?: string[] }): Promise<CatalogCollection[]>;
 }
 
 export const gidToId = (gid: string): string => gid.slice(gid.lastIndexOf('/') + 1);
-export const idToGid = (kind: 'ProductVariant' | 'Product', id: string): string => `gid://shopify/${kind}/${id}`;
+export const idToGid = (kind: 'ProductVariant' | 'Product' | 'Collection', id: string): string => `gid://shopify/${kind}/${id}`;

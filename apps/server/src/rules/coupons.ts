@@ -1,4 +1,5 @@
 import type { Coupon as CoreCoupon, CouponKind } from '@checkout/core';
+import { couponDetails, couponHeadline } from '@checkout/shared';
 import type { Coupon as CouponRow, CouponKind as DbKind, Prisma } from '@prisma/client';
 
 const KIND: Record<DbKind, CouponKind> = {
@@ -49,4 +50,10 @@ export function toCouponRow(storeId: string, c: CoreCoupon, visible = true): Pri
     startsAt: c.limits.startsAt ? new Date(c.limits.startsAt) : null,
     endsAt: c.limits.endsAt ? new Date(c.limits.endsAt) : null,
   };
+}
+
+/** What a shopper sees on a coupon card: the merchant's title / details, or words made from the rules. */
+export function shopperCard(row: CouponRow): { code: string; title: string; details: string[] } {
+  const core = toCoreCoupon(row);
+  return { code: row.code ?? '', title: row.title || couponHeadline(core), details: row.details.length ? row.details : couponDetails(core) };
 }

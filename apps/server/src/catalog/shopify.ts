@@ -1,7 +1,7 @@
 import { rupeesToPaise } from '@checkout/core';
 import type { PrismaClient } from '@prisma/client';
 import type { Keyring } from '../lib/crypto.js';
-import { gidToId, idToGid, type Catalog, type CatalogProduct, type CatalogVariant } from './types.js';
+import { gidToId, idToGid, type Catalog, type CatalogCollection, type CatalogProduct, type CatalogVariant } from './types.js';
 
 const VARIANT_FIELDS = `
   id title sku price compareAtPrice availableForSale
@@ -105,6 +105,27 @@ export class ShopifyCatalog implements Catalog {
       { q: q ? `title:*${q}*` : null },
     );
     return this.products(storeId, data.products.nodes.map((n) => gidToId(n.id)));
+  }
+
+  async collections(storeId: string, opts: { query?: string; ids?: string[] }): Promise<CatalogCollection[]> {
+    type Node = { id: string; title: string; image?: { url: string } | null };
+    const map = (n: Node) => ({ collectionId: gidToId(n.id), title: n.title, image: n.image?.url });
+    if (opts.ids) {
+      if (opts.ids.length === 0) return [];
+      const data = await this.gql<{ nodes: (Node | null)[] }>(
+        storeId,
+        `query($ids: [ID!]!) { nodes(ids: $ids) { ... on Collection { id title image { url } } } }`,
+        { ids: opts.ids.slice(0, 50).map((id) => idToGid('Collection', id)) },
+      );
+      return data.nodes.filter((n): n is Node => !!n?.id).map(map);
+    }
+    const q = (opts.query ?? '').replace(/["\\]/g, ' ').trim();
+    const data = await this.gql<{ collections: { nodes: Node[] } }>(
+      storeId,
+      `query($q: String) { collections(first: 20, query: $q, sortKey: TITLE) { nodes { id title image { url } } } }`,
+      { q: q ? `title:*${q}*` : null },
+    );
+    return data.collections.nodes.map(map);
   }
 
   async products(storeId: string, productIds: string[]): Promise<CatalogProduct[]> {

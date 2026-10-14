@@ -317,5 +317,23 @@
     }
    ]
   }
+ ],
+ "collections": [
+  {
+   "collectionId": "9001",
+   "title": "Jhumkas & Earrings"
+  },
+  {
+   "collectionId": "9002",
+   "title": "Kurtis"
+  },
+  {
+   "collectionId": "9003",
+   "title": "Jewellery Boxes & Rings"
+  },
+  {
+   "collectionId": "9004",
+   "title": "Free gifts"
+  }
  ]
 }

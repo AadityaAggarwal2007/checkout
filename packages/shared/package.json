@@ -18,6 +18,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./india": "./src/india.ts",
-    "./payments": "./src/payments.ts"
+    "./payments": "./src/payments.ts",
+    "./coupon-text": "./src/coupon-text.ts"
   }
 }

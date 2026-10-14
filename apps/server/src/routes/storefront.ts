@@ -10,7 +10,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { badRequest, notFound } from '../lib/errors.js';
 import { normaliseShop } from '../lib/shopify.js';
 import { isTestKey } from '../checkout/service.js';
-import { toCoreCoupon } from '../rules/coupons.js';
+import { shopperCard, toCoreCoupon } from '../rules/coupons.js';
 
 /**
  * Public API for the storefront script. No cookies, no personal data: config and prices only,
@@ -72,9 +72,8 @@ export function storefrontRoutes(app: FastifyInstance): void {
       (await prisma.drawerConfig.findFirst({ where: { storeId: store.id, isActive: true } })) ??
       (await prisma.drawerConfig.findFirst({ where: { storeId: store.id }, orderBy: { createdAt: 'asc' } }));
     const coupons = await prisma.coupon.findMany({
-      where: { storeId: store.id, active: true, visible: true, deletedAt: null, code: { not: null } },
+      where: { storeId: store.id, active: true, visible: true, deletedAt: null, code: { not: null }, kind: { not: 'PAYMENT_OFFER' } },
       orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
-      select: { code: true, title: true },
       take: 20,
     });
     // Our checkout once the merchant switched it on; before that only with the merchant's test link.
@@ -86,7 +85,7 @@ export function storefrontRoutes(app: FastifyInstance): void {
       storeName: store.name,
       version: drawer?.version ?? 0,
       drawer: drawerSettingsSchema.parse(drawer?.config ?? {}),
-      visibleCodes: coupons.map((c) => ({ code: c.code!, title: c.title ?? undefined })),
+      visibleCodes: coupons.map(shopperCard),
       checkout: popup ? { mode: 'popup', url: app.deps.env.CHECKOUT_URL ?? app.deps.env.PUBLIC_URL } : { mode: 'shopify' },
     };
     // Mark the embed as seen (dashboard shows "drawer is live"), at most once a minute.

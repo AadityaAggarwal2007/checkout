@@ -7,7 +7,7 @@ export interface StorefrontConfig {
   version: number;
   drawer: DrawerSettings;
   /** Codes shown in the "Apply discount code" sheet (only coupons marked visible). */
-  visibleCodes: Array<{ code: string; title?: string }>;
+  visibleCodes: Array<{ code: string; title?: string; details?: string[] }>;
   /** 'shopify' until our checkout is live for the store (Phase 2), then 'popup'. */
   checkout: { mode: 'shopify' } | { mode: 'popup'; url: string };
 }

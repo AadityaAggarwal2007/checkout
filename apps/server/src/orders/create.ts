@@ -143,13 +143,16 @@ export async function createOrder(
 
 /** Sends the order to Shopify; a failure is kept on the order and retried by the job. */
 export async function pushOrderToShopify(prisma: PrismaClient, sink: OrderSink, orderId: string): Promise<void> {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { lines: true, store: true } });
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { lines: true, store: true } }).catch(() => null);
   if (!order || order.shopifyOrderId) return;
   try {
     const { id, name } = await sink.create(order, order.store.shopDomain, order.storeId);
     await prisma.order.update({ where: { id: order.id }, data: { shopifyOrderId: id, shopifyName: name, shopifyError: null } });
   } catch (err) {
-    await prisma.order.update({ where: { id: order.id }, data: { shopifyError: String((err as Error).message ?? err).slice(0, 500) } });
+    // Runs in the background (not awaited): it must never throw.
+    await prisma.order
+      .update({ where: { id: order.id }, data: { shopifyError: String((err as Error).message ?? err).slice(0, 500) } })
+      .catch(() => undefined);
   }
 }
 
