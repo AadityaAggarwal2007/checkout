@@ -26,7 +26,8 @@ export interface CatalogProduct {
 
 /** Where prices come from. The server never trusts prices sent by a browser. */
 export interface Catalog {
-  variants(storeId: string, variantIds: string[]): Promise<Map<string, CatalogVariant>>;
+  /** fresh = skip any cache (used right before payment). */
+  variants(storeId: string, variantIds: string[], fresh?: boolean): Promise<Map<string, CatalogVariant>>;
   products(storeId: string, productIds: string[]): Promise<CatalogProduct[]>;
   /** Dashboard product picker: title search, first 20. */
   search(storeId: string, query: string): Promise<CatalogProduct[]>;

@@ -76,19 +76,22 @@ export function storefrontRoutes(app: FastifyInstance): void {
       select: { code: true, title: true },
       take: 20,
     });
+    // Our checkout once the merchant switched it on; before that only for ?ck_test=1 (merchant testing).
+    const { test } = req.query as { test?: string };
+    const settings = await prisma.storeSettings.findUnique({ where: { storeId: store.id } });
+    const popup = settings?.checkoutEnabled || test === '1';
     const body: StorefrontConfig = {
       storeName: store.name,
       version: drawer?.version ?? 0,
       drawer: drawerSettingsSchema.parse(drawer?.config ?? {}),
       visibleCodes: coupons.map((c) => ({ code: c.code!, title: c.title ?? undefined })),
-      // Phase 2 switches stores to our popup checkout; until then the Shopify checkout is used.
-      checkout: { mode: 'shopify' },
+      checkout: popup ? { mode: 'popup', url: app.deps.env.CHECKOUT_URL ?? app.deps.env.PUBLIC_URL } : { mode: 'shopify' },
     };
     // Mark the embed as seen (dashboard shows "drawer is live"), at most once a minute.
     void prisma.shopifyConnection
       .updateMany({ where: { storeId: store.id, OR: [{ embedSeenAt: null }, { embedSeenAt: { lt: new Date(Date.now() - 60_000) } }] }, data: { embedSeenAt: new Date() } })
       .catch(() => undefined);
-    return open(reply).header('cache-control', 'public, max-age=30').send(body);
+    return open(reply).header('cache-control', test === '1' ? 'no-store' : 'public, max-age=30').send(body);
   });
 
   app.post('/storefront/price', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (req, reply) => {

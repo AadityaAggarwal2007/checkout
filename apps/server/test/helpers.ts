@@ -9,6 +9,10 @@ import { loadEnv } from '../src/env.js';
 import { Keyring } from '../src/lib/crypto.js';
 import type { ShopifyApi } from '../src/lib/shopify.js';
 import { Tokens } from '../src/lib/tokens.js';
+import { DevPincodeLookup } from '../src/address/pincode.js';
+import { DevOtpSender } from '../src/messaging/otp-sender.js';
+import type { OrderSink } from '../src/orders/sink.js';
+import { GatewayRegistry } from '../src/payments/registry.js';
 
 export const TEST_DB = process.env.DATABASE_URL ?? 'postgresql://checkout:checkout@localhost:5432/checkout_test';
 
@@ -23,6 +27,9 @@ export const env = loadEnv({
   HASH_PEPPER: key(),
   SHOPIFY_API_KEY: 'test-api-key',
   SHOPIFY_API_SECRET: 'test-api-secret',
+  DEV_GATEWAY: '1',
+  OTP_SENDER: 'dev',
+  PINCODE_LOOKUP: 'dev',
 });
 
 export const prisma = new PrismaClient({ datasources: { db: { url: TEST_DB } } });
@@ -41,14 +48,32 @@ export const fakeShopify: ShopifyApi & { calls: string[] } = {
 
 export const devCatalog = new DevCatalog(fileURLToPath(new URL('../../devstore/catalog.json', import.meta.url)));
 
+export const keyring = new Keyring(env.ENCRYPTION_KEYS);
+export const otpOutbox = new DevOtpSender(false);
+
+/** Orders "sent to Shopify" in tests. */
+export const fakeOrderSink: OrderSink & { orders: Array<{ number: string; total: number }>; fail: boolean } = {
+  orders: [],
+  fail: false,
+  async create(order) {
+    if (this.fail) throw new Error('Shopify is down');
+    this.orders.push({ number: order.number, total: order.total });
+    return { id: String(9000 + this.orders.length), name: `#${1000 + this.orders.length}` };
+  },
+};
+
 export async function makeApp(overrides: Partial<Deps> = {}): Promise<FastifyInstance> {
   return buildApp({
     env,
     prisma,
-    keyring: new Keyring(env.ENCRYPTION_KEYS),
+    keyring,
     tokens: new Tokens(env.JWT_SECRET),
     shopify: fakeShopify,
     catalog: devCatalog,
+    otp: otpOutbox,
+    gateways: new GatewayRegistry({ env, prisma, keyring }),
+    orderSink: fakeOrderSink,
+    pincodes: new DevPincodeLookup(),
     ...overrides,
   });
 }

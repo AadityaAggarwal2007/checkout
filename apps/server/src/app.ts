@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Deps } from './context.js';
 import { HttpError } from './lib/errors.js';
 import { authRoutes } from './routes/auth.js';
+import { checkoutRoutes } from './routes/checkout.js';
 import { drawerRoutes } from './routes/drawers.js';
 import { healthRoutes } from './routes/health.js';
 import { shopifyRoutes } from './routes/shopify.js';
@@ -30,13 +31,19 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
     }
   });
 
+  // Gateways post their callbacks as forms; keep the raw bytes too.
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'buffer' }, (req, body: Buffer, done) => {
+    req.rawBody = body;
+    done(null, Object.fromEntries(new URLSearchParams(body.toString('utf8'))));
+  });
+
   await app.register(cookie);
   await app.register(rateLimit, { global: false });
-  // Dashboard API: only the dashboard origin, with cookies.
-  // Dashboard API: only the dashboard origin, with cookies. /storefront/* sets its own open CORS.
+  // Dashboard API: only the dashboard origin, with cookies. /storefront/* sets its own open CORS;
+  // the checkout page and its API are same-origin only; gateways need no CORS.
   await app.register(cors, {
     delegator: (req, cb) => {
-      if (req.url?.startsWith('/storefront/')) return cb(null, { origin: false });
+      if (/^\/(storefront|checkout|webhooks)\//.test(req.url ?? '')) return cb(null, { origin: false });
       cb(null, { origin: (origin, done) => done(null, !origin || origin === deps.env.DASHBOARD_URL), credentials: true });
     },
   });
@@ -52,7 +59,10 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   });
 
   app.setErrorHandler((err, req, reply) => {
-    if (err instanceof HttpError) return reply.code(err.status).send({ error: err.code, message: err.message });
+    if (err instanceof HttpError) {
+      if (err.status >= 500) req.log.warn({ err: err.cause ?? err }, err.message);
+      return reply.code(err.status).send({ ...err.data, error: err.code, message: err.message });
+    }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status >= 400 && status < 500) return reply.code(status).send({ error: 'bad_request', message: err.message });
     req.log.error({ err }, 'unhandled error');
@@ -65,5 +75,6 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   shopifyRoutes(app);
   drawerRoutes(app);
   storefrontRoutes(app);
+  checkoutRoutes(app);
   return app;
 }

@@ -183,6 +183,11 @@ model StoreSettings {
   partialCodMin       Int?
   partialCodMax       Int?
   codConfirmPopup     Boolean @default(true)
+  /// Our checkout replaces Shopify's once the merchant switches it on (needs a gateway or COD).
+  checkoutEnabled     Boolean @default(false)
+  /// Our order numbers: prefix + running number ("CK1001"). The counter only goes up.
+  orderPrefix         String  @default("CK")
+  nextOrderNumber     Int     @default(1001)
 
   /// 'session' | 'customer' — upsell countdown scope
   upsellTimerScope    String  @default("session")
@@ -391,6 +396,8 @@ model BlockedPincode {
 enum GatewayProvider {
   PAYGLOCAL
   PAYU
+  /// Local test gateway (only when the server runs with DEV_GATEWAY=1; never on a live server).
+  DEV
 }
 
 model GatewayAccount {
@@ -458,6 +465,8 @@ model PaymentTransaction {
   gatewayRef       String?
   /// Last raw status response, secrets stripped.
   raw              Json?
+  /// The order this payment pays for (cart, pricing, address at the moment of paying). The order is made from it.
+  draft            Json?
   verifiedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -664,6 +673,10 @@ model Order {
   /// Shopify ids once created there.
   shopifyOrderId  String?
   shopifyName     String?
+  /// Our own short number shown before / without Shopify ("CK-1042").
+  number          String
+  /// Last error while creating the order in Shopify (retried by a job).
+  shopifyError    String?
   paymentMode     PaymentMode
   paymentStatus   OrderPaymentStatus @default(PENDING)
   paymentMethod   String?
@@ -702,6 +715,7 @@ model Order {
   usageCharge  UsageCharge?
 
   @@unique([storeId, shopifyOrderId])
+  @@unique([storeId, number])
   @@index([storeId, createdAt])
   @@index([storeId, paymentStatus])
   @@index([storeId, contactPhone])

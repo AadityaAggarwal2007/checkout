@@ -4,9 +4,14 @@ export class HttpError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    opts: { cause?: unknown; data?: Record<string, unknown> } = {},
   ) {
-    super(message);
+    super(message, { cause: opts.cause });
+    this.data = opts.data;
   }
+
+  /** Extra fields sent with the error (e.g. the new checkout state when a price changed). */
+  readonly data?: Record<string, unknown>;
 }
 
 export const badRequest = (message: string, code = 'bad_request') => new HttpError(400, code, message);

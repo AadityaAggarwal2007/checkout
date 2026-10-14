@@ -2,10 +2,10 @@ import { SignJWT, jwtVerify } from 'jose';
 
 /**
  * Short signed tokens (HS256) for: the dashboard login cookie, the Shopify OAuth state,
- * and the one-time "claim this store" link after an install. Every token has a purpose
+ * the one-time "claim this store" link after an install, and a shopper's checkout session. Every token has a purpose
  * ("aud") so one kind can never be replayed as another.
  */
-export type TokenPurpose = 'session' | 'oauth_state' | 'store_claim';
+export type TokenPurpose = 'session' | 'oauth_state' | 'store_claim' | 'checkout';
 
 export class Tokens {
   private readonly key: Uint8Array;
