@@ -54,6 +54,11 @@ Started 2026-10-14. This file is the memory of the planning. Every new session r
   id, approved OTP template), PayU test key + salt, PayGlocal UAT keys, Shopify Partner app + dev store — then
   the "real test order" of Phase 2 can be done.
 
+- 2026-10-14 Owner: the checkout goes on **merchantbuild.in** (demo store on demo.merchantbuild.in); Shopify Builder
+  steps aside there (only its nginx link is removed; app, code, database kept; `deploy/restore-site.sh` undoes it).
+  VPS install: `docs/VPS.md`, `deploy/install.sh`; updates by GitHub "Deploy to VPS" with a key that can only run
+  `deploy/update.sh`.
+
 ## What exists today (code on `main`, last commit 513997c, 2026-08-22)
 
 Three parts, all build fine (checked 2026-10-09: widget build OK, dashboard `tsc` 0 errors,

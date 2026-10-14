@@ -12,42 +12,40 @@ dono ka sirf server (machine) common hai, baaki sab alag.
 | Node / PM2 | ShipTrack wala | `checkout` user ka apna Node 20 aur apna PM2 |
 | Port | 3000 | 5202, 5203, 5204 (sirf andar, 127.0.0.1) |
 | nginx | ShipTrack ki files | sirf `/etc/nginx/sites-available/checkout.conf` |
-| Domain | shiptrack.store | naya subdomain (neeche) |
+| Domain | shiptrack.store | merchantbuild.in (+ demo.merchantbuild.in) |
 
 Script yeh kabhi nahi karti: ShipTrack ki files, uska database, uska PM2, uski nginx file ya firewall ko chhoona.
 Agar jo domain ya port aap do woh pehle se kisi aur app ka ho, to script **ruk jaati hai aur kuch nahi badalti**.
 
 ## Aapko kya karna hai (ek baar, ~15 minute)
 
-### 1. Do subdomain chuno
-- **Dashboard + checkout:** jaise `checkout.shiptrack.store`
-- **Demo store** (sirf trial ke liye): jaise `demo-checkout.shiptrack.store`
+### 1. Domain: merchantbuild.in (owner 2026-10-14)
+- **Dashboard + checkout:** `merchantbuild.in`
+- **Demo store** (sirf trial): `demo.merchantbuild.in`
 
-(`cart.shiptrack.store` mat lena, woh purane app ka hai. Brand ka naam aane par domain badal sakte hain.)
+Abhi merchantbuild.in par **Shopify Builder** chal raha hai. Script use **side** karti hai: sirf uski nginx
+link hat-ti hai. Builder ka app (pm2 `builder`), code `/var/www/builder`, database `builder` aur
+`/etc/builder` waise hi rehte hain, kuch delete nahi hota. Wapas laana ho:
+`sudo bash /srv/checkout/app/deploy/restore-site.sh`.
 
-### 2. Hostinger DNS mein dono ko VPS par point karo
-Hostinger → Domains → shiptrack.store → **DNS / Nameservers** → **Add record**, dono ke liye:
-- Type: **A**
-- Name: `checkout` (doosre ke liye `demo-checkout`)
-- Points to: **aapke VPS ka IP** (wahi jo ShipTrack ka hai)
-- TTL: default
-
-10-30 minute mein DNS chalu ho jaata hai.
+### 2. Hostinger DNS mein `demo` jodo
+`merchantbuild.in` pehle se VPS par point karta hai (Builder wahin hai). Sirf ek record jodna hai:
+Hostinger → **Domains** → merchantbuild.in → **Manage** → **DNS / Nameservers** → form:
+- Type **A**, Name **`demo`**, Points to: list mein `@` wali A line ka IP (wahi VPS), TTL waisa hi → **Add Record**
 
 ### 3. VPS ka terminal kholo
-Hostinger → VPS → **Browser terminal** (ya Mac Terminal se `ssh root@<VPS IP>`). Phir yeh do line chalao
-(apne domain daal kar):
+Hostinger → **VPS** → **Browser terminal**. Phir yeh do line:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/AadityaAggarwal2007/checkout/claude/flexype-plan/deploy/install.sh -o /tmp/checkout-install.sh
-sudo bash /tmp/checkout-install.sh --domain checkout.shiptrack.store --demo-domain demo-checkout.shiptrack.store
+sudo bash /tmp/checkout-install.sh --domain merchantbuild.in --demo-domain demo.merchantbuild.in --replace-site builder
 ```
 
 5-10 minute lagenge. Aakhir mein `== Done` aur links dikhenge.
 
 - Agar likha aaye **"certbot is not installed"**: `sudo apt-get install -y certbot python3-certbot-nginx` chalao,
   phir upar wali doosri line dobara.
-- Agar likha aaye **"HTTPS not set yet"**: DNS abhi chalu nahi hua. 20 minute baad doosri line dobara chalao.
+- Agar likha aaye **"HTTPS not set yet"**: `demo` ka DNS abhi chalu nahi hua. 20 minute baad doosri line dobara.
 - Script dobara chalana safe hai: settings, database aur demo login waise hi rehte hain.
 
 ### 4. Demo login dekho
@@ -67,9 +65,9 @@ Yeh key **sirf checkout ko update kar sakti hai**: VPS par na shell khulta hai, 
 kabhi mat bhejna; sirf GitHub Secrets mein. Dobara dekhni ho: `sudo cat /etc/checkout/deploy_key`.
 
 ### 6. Try karo
-- **Demo store:** `https://demo-checkout.shiptrack.store` → product → Add to cart → Checkout
+- **Demo store:** `https://demo.merchantbuild.in` → product → Add to cart → Checkout
   (OTP page par peele box mein, payment = test gateway, asli paisa nahi).
-- **Dashboard:** `https://checkout.shiptrack.store` → demo login.
+- **Dashboard:** `https://merchantbuild.in` → demo login.
 
 ## Baad mein
 
