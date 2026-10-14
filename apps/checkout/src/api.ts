@@ -1,4 +1,4 @@
-import type { CheckoutState, PayStart } from '@checkout/shared';
+import type { CheckoutState, PayStart, UpiIntentInfo } from '@checkout/shared';
 
 /** Thrown for any non-2xx answer; `message` is safe to show the shopper. */
 export class ApiError extends Error {
@@ -61,7 +61,7 @@ export function api(token: string) {
     upsell: (change: { variantId?: string; lineId?: string }) => call<S>('POST', '/checkout/api/upsell', change),
     exit: (reason: string) => call<{ ok: true }>('POST', '/checkout/api/exit', { reason }),
     coupon: (change: { add?: string; remove?: string }) => call<S>('POST', '/checkout/api/coupon', change),
-    pay: (method: string, expectedTotal: number) => call<S & { pay: PayStart | null }>('POST', '/checkout/api/pay', { method, expectedTotal }),
+    pay: (method: string, expectedTotal: number) => call<S & { pay: PayStart | null; upi: UpiIntentInfo | null }>('POST', '/checkout/api/pay', { method, expectedTotal }),
     cancelPayment: () => call<S>('POST', '/checkout/api/pay/cancel', {}),
   };
 }

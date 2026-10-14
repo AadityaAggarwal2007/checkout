@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { FetchLike, Gateway, GatewayStart, GatewayStatus, PaymentRequest } from './types.js';
+import type { FetchLike, Gateway, GatewayStart, GatewayStatus, PaymentRequest, UpiIntentRequest, UpiIntentStart } from './types.js';
 import { paiseFrom, rupees } from './types.js';
 
 export interface PayUCredentials {
@@ -40,7 +40,8 @@ export class PayUGateway implements Gateway {
     return sha512([f.key, f.txnid, f.amount, f.productinfo, f.firstname, f.email, ...udf, '', '', '', '', '', salt].join('|'));
   }
 
-  async start(req: PaymentRequest): Promise<GatewayStart> {
+  /** The _payment fields every PayU request shares (hosted page and server-to-server UPI), hash included. */
+  private baseFields(req: PaymentRequest): Record<string, string> {
     const fields: Record<string, string> = {
       key: this.creds.key,
       txnid: req.merchantRef,
@@ -57,10 +58,53 @@ export class PayUGateway implements Gateway {
       udf4: '',
       udf5: '',
     };
-    const pm = req.method ? METHOD_TO_PAYU[req.method] : undefined;
-    if (pm) fields.enforce_paymethod = pm;
     fields.hash = PayUGateway.requestHash(fields, this.creds.salt);
+    return fields;
+  }
+
+  async start(req: PaymentRequest): Promise<GatewayStart> {
+    const fields = this.baseFields(req);
+    const pm = req.method ? METHOD_TO_PAYU[req.method] : undefined;
+    if (pm) fields.enforce_paymethod = pm; // not part of the hash
     return { kind: 'post', url: this.payUrl, fields };
+  }
+
+  /**
+   * UPI Intent, server to server (PayU "txn_s2s_flow=4", pg=UPI, bankcode=INTENT): the same _payment call
+   * and hash as the hosted page, answered as JSON with the upi:// link instead of a page. Anything else
+   * (HTML, an error, no link, S2S not enabled for this merchant id) is null and the hosted page is used.
+   * Tried for every PayU UPI payment; the caller remembers a refusal so it is not asked again for hours.
+   */
+  async startUpiIntent(req: UpiIntentRequest): Promise<UpiIntentStart | null> {
+    const fields = this.baseFields(req);
+    Object.assign(fields, {
+      pg: 'UPI',
+      bankcode: 'INTENT',
+      txn_s2s_flow: '4',
+      s2s_client_ip: req.clientIp.slice(0, 45),
+      s2s_device_info: (req.userAgent || 'unknown').slice(0, 200),
+    });
+    const res = await this.fetchImpl(this.payUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+      body: new URLSearchParams(fields).toString(),
+      // Short: the shopper is waiting, and the hosted page is always there as the fallback.
+      signal: AbortSignal.timeout(8_000),
+    });
+    const text = await res.text();
+    if (!res.ok) return null;
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return null; // a page, not an answer: this merchant id is not set up for S2S
+    }
+    const intent = upiIntentIn(json, req.amount);
+    if (!intent) return null;
+    const result = (json as { result?: Record<string, unknown>; metaData?: Record<string, unknown> }).result;
+    const meta = (json as { metaData?: Record<string, unknown> }).metaData;
+    const ref = result?.mihpayid ?? meta?.referenceId;
+    return { intent, gatewayRef: typeof ref === 'string' || typeof ref === 'number' ? String(ref) : undefined };
   }
 
   async status(merchantRef: string): Promise<GatewayStatus> {
@@ -94,4 +138,31 @@ export class PayUGateway implements Gateway {
   refFromCallback(body: Record<string, unknown>): string | null {
     return typeof body.txnid === 'string' ? body.txnid : null;
   }
+}
+
+/** Every string inside a parsed JSON answer, in document order. */
+function stringsIn(value: unknown, out: string[] = [], depth = 0): string[] {
+  if (depth > 6) return out;
+  if (typeof value === 'string') out.push(value);
+  else if (Array.isArray(value)) for (const v of value) stringsIn(v, out, depth + 1);
+  else if (value && typeof value === 'object') for (const v of Object.values(value)) stringsIn(v, out, depth + 1);
+  return out;
+}
+
+/**
+ * The upi://pay link in PayU's answer. Documented as `result.intentURIData`; we also accept the link anywhere in the
+ * JSON, and a bare query string ("pa=…&am=…") which we prefix. Refused when it is not a UPI pay link, is too long
+ * for a QR, names no payee, or carries an amount other than ours (the shopper would pay the wrong sum).
+ */
+export function upiIntentIn(json: unknown, amount: number): string | null {
+  const strings = stringsIn(json);
+  const direct = strings.find((s) => s.startsWith('upi://pay?'));
+  const data = (json as { result?: { intentURIData?: unknown } } | null)?.result?.intentURIData;
+  const candidate = direct ?? (typeof data === 'string' && /(^|&)pa=/.test(data) ? `upi://pay?${data}` : undefined);
+  if (!candidate || candidate.length >= 1000 || /[\s<>"']/.test(candidate)) return null;
+  const params = new URLSearchParams(candidate.slice('upi://pay?'.length));
+  if (!params.get('pa')) return null;
+  const am = params.get('am');
+  if (am !== null && paiseFrom(am) !== amount) return null;
+  return candidate;
 }

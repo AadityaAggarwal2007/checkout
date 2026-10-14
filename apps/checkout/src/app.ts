@@ -34,6 +34,8 @@ export interface Ui {
   upsellVariant: Record<string, string>;
   /** Gateway URL of the open payment (desktop: "Reopen payment page"). */
   payUrl?: string;
+  /** When the UPI QR / app links shown in this page stop being offered (unix ms). */
+  upiExpiresAt?: number;
   busy?: string;
   notice?: { kind: 'error' | 'info'; text: string };
 }
@@ -133,8 +135,10 @@ export class App {
 
   async pay(m: CheckoutMethod): Promise<void> {
     const phone = isPhone();
+    // UPI on a gateway that can show its QR here: no tab; if the gateway then declines, the store page navigates.
+    const inline = m.method === 'upi' && !!this.state.inlineUpi;
     // Desktop: open the tab inside the click (popup blockers), point it at the gateway when ready.
-    const win = phone ? null : window.open('about:blank', '_blank');
+    const win = phone || inline ? null : window.open('about:blank', '_blank');
     if (win) {
       try {
         win.document.write('<p style="font:16px sans-serif;padding:24px">Opening secure payment…</p>');
@@ -145,7 +149,12 @@ export class App {
     await this.run('pay', async () => {
       try {
         const res = await this.api.pay(m.method, m.total);
-        if (res.pay) {
+        this.ui.payUrl = undefined;
+        this.ui.upiExpiresAt = undefined;
+        if (res.upi) {
+          this.ui.upiExpiresAt = res.upi.expiresAt;
+          win?.close();
+        } else if (res.pay) {
           this.ui.payUrl = res.pay.url;
           if (win && !win.closed) {
             win.location.href = res.pay.url;
@@ -176,6 +185,7 @@ export class App {
 
   async cancelPayment(): Promise<void> {
     this.gatewayWindow?.close();
+    this.ui.upiExpiresAt = undefined;
     await this.run('cancel', async () => this.set((await this.api.cancelPayment()).state));
   }
 

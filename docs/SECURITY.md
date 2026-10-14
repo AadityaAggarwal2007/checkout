@@ -26,6 +26,12 @@ real shoppers use the checkout, and after any change to payments, OTP or store a
 
 ## Checked and fine
 
+UPI inside the checkout (PayU intent, 2026-10-14): the `upi://pay` link is only a way to pay; the order is still
+placed only when `settle()` hears success for the exact amount from `verify_payment` server to server. The link is
+refused unless it is a `upi://pay` link under 1000 characters naming a payee and our amount; a refusal falls back to the
+hosted page. The shopper's IP and user agent go to PayU (its S2S fields) and nowhere else; the salt and hash are never
+logged or returned.
+
 Store isolation on every `/api/stores/:storeId/*` route (membership + every id also filtered by store),
 server-side prices (catalog re-read, re-priced before payment, frozen draft), upsell offers (variant must be in
 the live offer, timer, not while paying), addresses only for the same verified shopper, OTP limits in the

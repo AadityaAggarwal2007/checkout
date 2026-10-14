@@ -6,8 +6,9 @@ import {
   type CheckoutState,
   type CreateCheckout,
   type PayStart,
+  type UpiIntentInfo,
 } from '@checkout/shared';
-import { Prisma, type CheckoutSession, type Customer, type PaymentTransaction, type Store } from '@prisma/client';
+import { Prisma, type CheckoutSession, type Customer, type GatewayAccount, type PaymentTransaction, type Store } from '@prisma/client';
 import type { Deps } from '../context.js';
 import { pepperedHash, randomToken, safeEqual } from '../lib/crypto.js';
 import { HttpError, badRequest, conflict, notFound } from '../lib/errors.js';
@@ -20,6 +21,22 @@ import { customerForDevice } from './otp.js';
 import { liveRules, offerOf, pickRule, upsellStateOf, UPSELL_PREFIX, withUpsellPrices, type UpsellState } from './upsell.js';
 
 export const SESSION_TTL_SECONDS = 24 * 3600;
+/** How long the checkout shows a UPI QR / app link before offering to start again. */
+export const UPI_INTENT_TTL_MS = 5 * 60_000;
+/** After PayU answers a UPI start without a upi:// link (S2S not enabled for that merchant id), how long we do not ask again. */
+export const UPI_INTENT_RETRY_MS = 6 * 3600_000;
+
+/** Who is paying, for gateways that want it on a server-to-server start (PayU UPI Intent). */
+export interface ClientInfo {
+  ip: string;
+  userAgent: string;
+}
+
+/** Kept in PaymentTransaction.raw.upi while an inline UPI payment is shown. */
+const upiOf = (txn: PaymentTransaction | null, now: number): UpiIntentInfo | undefined => {
+  const upi = (txn?.raw as { upi?: Partial<UpiIntentInfo> } | null)?.upi;
+  return upi && typeof upi.intent === 'string' && typeof upi.expiresAt === 'number' && upi.expiresAt > now ? { intent: upi.intent, expiresAt: upi.expiresAt } : undefined;
+};
 
 export type SessionWithStore = CheckoutSession & { store: Store };
 
@@ -245,8 +262,9 @@ export class CheckoutService {
         !order && lastTxn?.status === 'FAILED' && session.status === 'OPEN'
           ? { status: 'failed', method: lastTxn.method ?? undefined, message: 'Your payment did not go through. No money was taken, or it will be refunded by your bank. Please try again.' }
           : step === 'processing'
-            ? { status: 'pending', method: lastTxn?.method ?? undefined }
+            ? { status: 'pending', method: lastTxn?.method ?? undefined, upi: upiOf(lastTxn, Date.now()) }
             : { status: 'idle' },
+      inlineUpi: this.inlineUpi(ctx.routes.get('upi')),
       order: order
         ? { number: order.number, total: order.total, paidAmount: order.paidAmount, dueOnDelivery: order.dueOnDelivery, paymentMode: order.paymentMode }
         : null,
@@ -343,7 +361,18 @@ export class CheckoutService {
    * what the shopper saw, nothing happens and the new state comes back (409 price_changed).
    * Cash on delivery places the order now; online methods return the page that opens the gateway.
    */
-  async pay(session: SessionWithStore, customer: Customer, method: PaymentMethod, expectedTotal: number): Promise<{ order?: true; pay?: PayStart }> {
+  /** Gateway accounts (id + mode) whose last UPI intent start was refused, and until when we leave them alone. */
+  private upiRefusedUntil = new Map<string, number>();
+
+  /** True when paying by UPI through this account shows the QR / app buttons in our page (PayU, unless it refused lately). */
+  private inlineUpi(account: GatewayAccount | undefined): boolean {
+    if (!account || account.provider !== 'PAYU') return false;
+    const until = this.upiRefusedUntil.get(`${account.id}:${account.mode}`);
+    if (until !== undefined && until > Date.now()) return false;
+    return true;
+  }
+
+  async pay(session: SessionWithStore, customer: Customer, method: PaymentMethod, expectedTotal: number, client?: ClientInfo): Promise<{ order?: true; pay?: PayStart; upi?: UpiIntentInfo }> {
     this.assertOpen(session);
     const address = this.addressOf(session, customer);
     if (!address) throw badRequest('Choose a delivery address first.', 'no_address');
@@ -410,7 +439,50 @@ export class CheckoutService {
         data: { status: 'PAYING', step: 'PROCESSING', paymentMethod: method, pricing: result as unknown as Prisma.InputJsonValue, total: result.total },
       }),
     ]);
-    return { pay: { url: `${this.deps.env.PUBLIC_URL}/checkout/go/${ref}`, ref } };
+    const pay: PayStart = { url: `${this.deps.env.PUBLIC_URL}/checkout/go/${ref}`, ref };
+    const upi = method === 'upi' && client && this.inlineUpi(account) ? await this.startUpiIntent(ref, account, draft, session.store, client) : undefined;
+    return upi ? { pay, upi } : { pay };
+  }
+
+  /**
+   * Shiprocket-style UPI: the gateway starts the payment server to server and we show its upi:// link as a QR
+   * (desktop) or app buttons (phone). Tried for every UPI payment on a PayU account; the transaction is the
+   * same PENDING row the hosted page would use, so settle() / the webhook / polling confirm it exactly as
+   * before. Any problem = undefined = hosted page, with nothing shown to the shopper.
+   */
+  private async startUpiIntent(ref: string, account: GatewayAccount, draft: OrderDraft, store: Store, client: ClientInfo): Promise<UpiIntentInfo | undefined> {
+    const gateway = this.deps.gateways.for(account);
+    if (!gateway.startUpiIntent) return undefined;
+    const key = `${account.id}:${account.mode}`;
+    let start;
+    try {
+      start = await gateway.startUpiIntent({
+        merchantRef: ref,
+        amount: draft.pricing.payNow,
+        method: 'upi',
+        customer: { name: draft.address.name, phone: draft.phone, email: draft.address.email },
+        returnUrl: `${this.deps.env.PUBLIC_URL}/checkout/return/${ref}`,
+        notifyUrl: `${this.deps.env.PUBLIC_URL}/webhooks/gateway/${account.provider.toLowerCase()}`,
+        description: `Order at ${store.name}`,
+        clientIp: client.ip,
+        userAgent: client.userAgent,
+      });
+    } catch {
+      start = null; // PayU unreachable or odd: the hosted page still works
+    }
+    if (!start) {
+      // Most often S2S is not enabled for this merchant id: do not make every UPI shopper wait for it again.
+      this.upiRefusedUntil.set(key, Date.now() + UPI_INTENT_RETRY_MS);
+      if (this.upiRefusedUntil.size > 1000) this.upiRefusedUntil.clear();
+      return undefined;
+    }
+    this.upiRefusedUntil.delete(key);
+    const upi: UpiIntentInfo = { intent: start.intent, expiresAt: Date.now() + UPI_INTENT_TTL_MS };
+    const changed = await this.prisma.paymentTransaction.updateMany({
+      where: { merchantRef: ref, status: 'CREATED' },
+      data: { status: 'PENDING', gatewayRef: start.gatewayRef, raw: { upi } as unknown as Prisma.InputJsonValue },
+    });
+    return changed.count ? upi : undefined;
   }
 
   /** Shopper closed the gateway / pressed "Change payment method" while a payment was open. */

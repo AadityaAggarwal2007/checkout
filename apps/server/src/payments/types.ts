@@ -43,6 +43,14 @@ export interface GatewayStatus {
   raw: unknown;
 }
 
+/** A UPI payment started server to server, shown inside our checkout (QR / app buttons) instead of the hosted page. */
+export type UpiIntentRequest = PaymentRequest & { clientIp: string; userAgent: string };
+export interface UpiIntentStart {
+  /** The "upi://pay?…" link the shopper's UPI app opens (also what the QR code holds). */
+  intent: string;
+  gatewayRef?: string;
+}
+
 /**
  * One payment gateway. Rule 3: an order is "paid" only after status() — a server-to-server
  * call — says success for the right amount. Callbacks and redirects only tell us WHICH
@@ -52,6 +60,12 @@ export interface Gateway {
   start(req: PaymentRequest): Promise<GatewayStart>;
   status(merchantRef: string, gatewayRef: string | null): Promise<GatewayStatus>;
   refFromCallback(body: Record<string, unknown>, query: Record<string, unknown>): string | null;
+  /**
+   * Optional: a UPI intent for the same transaction, so the checkout can show the QR itself.
+   * null = not available for this merchant / answer → the caller falls back to start().
+   * The payment is still confirmed only by status().
+   */
+  startUpiIntent?(req: UpiIntentRequest): Promise<UpiIntentStart | null>;
 }
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;

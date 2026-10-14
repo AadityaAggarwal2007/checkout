@@ -129,6 +129,14 @@ Exit flow: leaving shows default / out-of-stock / savings reminder / survey (per
   new state. COD places the order at once. Online: a `PaymentTransaction` with a random ref (≤ 25 chars) and the
   frozen order draft; the shopper goes to `/checkout/go/<ref>` (desktop: a new tab opened inside the click; phone:
   the store page navigates) which posts / redirects to the gateway.
+- **UPI inside the page (PayU):** for every UPI payment routed to a PayU account the server first asks PayU for a
+  UPI intent server to server (`startUpiIntent`: the same `_payment` call and hash with `pg=UPI`, `bankcode=INTENT`,
+  `txn_s2s_flow=4`, the shopper's IP and user agent, 8 s). The `upi://pay` link comes back in the pay answer and in
+  `state.payment.upi` for 5 minutes; the checkout draws it as a QR (desktop, own encoder `apps/checkout/src/qr.ts`,
+  no CDN) or as Open UPI app / GPay / PhonePe / Paytm buttons (phone). The transaction is the same PENDING row, so
+  the poll, webhook and return page confirm it exactly as below. Any other answer (a page, an error, no link:
+  PayU must enable "UPI Intent S2S" for the merchant id) falls back to the hosted page with nothing shown, and that
+  account is not asked again for 6 hours (in memory, per account id + mode; a success clears it).
 - **Paid:** the return page, the gateway webhook and the iframe's polling all call `settle(ref)`: the gateway's
   status API decides (PayU `verify_payment`, PayGlocal status by gid); the amount must match. Then `createOrder`
   (one per session, unique key) → order number, coupon uses, shopper counters, `UsageCharge` 1%, then

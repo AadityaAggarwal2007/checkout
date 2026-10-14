@@ -243,9 +243,11 @@ export function checkoutRoutes(app: FastifyInstance): void {
     const customer = await needCustomer(ctx);
     const body = payBody.safeParse(req.body);
     if (!body.success) throw badRequest('Choose a payment method.');
-    const out = await service.pay(ctx.session, customer, body.data.method as PaymentMethod, body.data.expectedTotal);
+    // The shopper's address and browser go to the gateway only for the server-to-server UPI start (PayU asks for them).
+    const client = { ip: req.ip, userAgent: String(req.headers['user-agent'] ?? '').slice(0, 300) };
+    const out = await service.pay(ctx.session, customer, body.data.method as PaymentMethod, body.data.expectedTotal, client);
     const fresh = await prisma.checkoutSession.findUniqueOrThrow({ where: { id: ctx.session.id }, include: { store: true } });
-    return send(reply, { pay: out.pay ?? null, state: await service.state(fresh, customer) });
+    return send(reply, { pay: out.pay ?? null, upi: out.upi ?? null, state: await service.state(fresh, customer) });
   });
 
   app.post('/checkout/api/pay/cancel', async (req, reply) => {

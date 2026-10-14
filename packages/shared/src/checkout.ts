@@ -168,7 +168,9 @@ export interface CheckoutState {
   /** Why COD is not offered (shown under the list). */
   codReasons: string[];
   unserviceable: boolean;
-  payment: { status: 'idle' | 'pending' | 'failed'; message?: string; method?: string };
+  payment: { status: 'idle' | 'pending' | 'failed'; message?: string; method?: string; upi?: UpiIntentInfo };
+  /** The UPI route can show its QR / app buttons inside this page (no hosted gateway page). */
+  inlineUpi?: boolean;
   order: { number: string; total: number; paidAmount: number; dueOnDelivery: number; paymentMode: 'PREPAID' | 'COD' | 'PARTIAL_COD' } | null;
 }
 
@@ -177,4 +179,11 @@ export interface PayStart {
   /** Our page that sends the shopper on to the gateway (new tab on desktop, same tab on phone). */
   url: string;
   ref: string;
+}
+
+/** A UPI payment shown inside the checkout: the upi://pay link (QR / app buttons) and when it is no longer offered. */
+export interface UpiIntentInfo {
+  intent: string;
+  /** Unix ms. After this the page offers to try again; the payment itself is still checked for 2 hours. */
+  expiresAt: number;
 }
