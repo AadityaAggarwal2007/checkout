@@ -71,7 +71,9 @@ kabhi mat bhejna; sirf GitHub Secrets mein. Dobara dekhni ho: `sudo cat /etc/che
 
 ## Baad mein
 
-**Naya code aane par:** step 5 ho gaya ho to Claude GitHub ke "Deploy to VPS" se khud update kar dega. Haath se karna ho:
+**Naya code aane par:** kuch nahi karna. Branch `claude/flexype-plan` par har push ke baad GitHub CI pehle saare
+tests chalata hai; sab green ho to job **deploy** VPS par `deploy/update.sh` chala deta hai (logs: GitHub → Actions).
+Test fail = deploy nahi. Haath se karna ho:
 ```bash
 sudo bash /srv/checkout/app/deploy/update.sh
 ```
