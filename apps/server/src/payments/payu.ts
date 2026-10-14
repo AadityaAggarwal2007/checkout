@@ -92,15 +92,20 @@ export class PayUGateway implements Gateway {
       signal: AbortSignal.timeout(8_000),
     });
     const text = await res.text();
-    if (!res.ok) return null;
+    // Why PayU said no, for the server log (its answer carries no secret; long hex strings are cut anyway).
+    const refuse = (why: string) => {
+      console.warn(`[payu upi-intent] ${req.merchantRef}: ${why}: ${text.replace(/\s+/g, ' ').replace(/[a-f0-9]{40,}/gi, '…').slice(0, 300)}`);
+      return null;
+    };
+    if (!res.ok) return refuse(`HTTP ${res.status}`);
     let json: unknown;
     try {
       json = JSON.parse(text);
     } catch {
-      return null; // a page, not an answer: this merchant id is not set up for S2S
+      return refuse('not JSON'); // a page, not an answer: this merchant id is not set up for S2S
     }
     const intent = upiIntentIn(json, req.amount);
-    if (!intent) return null;
+    if (!intent) return refuse('no upi:// link');
     const result = (json as { result?: Record<string, unknown>; metaData?: Record<string, unknown> }).result;
     const meta = (json as { metaData?: Record<string, unknown> }).metaData;
     const ref = result?.mihpayid ?? meta?.referenceId;

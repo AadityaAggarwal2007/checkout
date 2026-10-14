@@ -439,9 +439,17 @@ export class CheckoutService {
         data: { status: 'PAYING', step: 'PROCESSING', paymentMethod: method, pricing: result as unknown as Prisma.InputJsonValue, total: result.total },
       }),
     ]);
-    const pay: PayStart = { url: `${this.deps.env.PUBLIC_URL}/checkout/go/${ref}`, ref };
-    const upi = method === 'upi' && client && this.inlineUpi(account) ? await this.startUpiIntent(ref, account, draft, session.store, client) : undefined;
-    return upi ? { pay, upi } : { pay };
+    const tried = method === 'upi' && !!client && this.inlineUpi(account);
+    const upi = tried ? await this.startUpiIntent(ref, account, draft, session.store, client!) : undefined;
+    if (upi) return { pay: { url: `${this.deps.env.PUBLIC_URL}/checkout/go/${ref}`, ref }, upi };
+    // PayU may have registered the refused S2S attempt under this reference: the hosted page gets a fresh one,
+    // so it is never turned away as a duplicate transaction id.
+    let hostedRef = ref;
+    if (tried) {
+      hostedRef = `ck${randomToken(12)}`;
+      await this.prisma.paymentTransaction.updateMany({ where: { merchantRef: ref, status: 'CREATED' }, data: { merchantRef: hostedRef } });
+    }
+    return { pay: { url: `${this.deps.env.PUBLIC_URL}/checkout/go/${hostedRef}`, ref: hostedRef } };
   }
 
   /**

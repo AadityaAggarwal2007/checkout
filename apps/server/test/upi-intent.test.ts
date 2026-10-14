@@ -146,6 +146,8 @@ describe('UPI inside the checkout (PayU intent, server to server)', () => {
     expect(out.state.payment.upi).toBeUndefined();
     const txn = await prisma.paymentTransaction.findUniqueOrThrow({ where: { merchantRef: out.pay!.ref } });
     expect(txn.status).toBe('CREATED'); // /checkout/go/:ref starts the hosted page as before
+    // The hosted page uses a fresh reference: PayU may have kept the refused S2S one.
+    expect(out.pay!.ref).not.toBe(payuCalls[0]!.get('txnid'));
     expect(txn.raw).toBeNull();
     const go = await app.inject({ method: 'GET', url: out.pay!.url.replace(env.PUBLIC_URL, '') });
     expect(go.statusCode).toBe(200);
