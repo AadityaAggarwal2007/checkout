@@ -1,0 +1,30 @@
+name: Deploy to VPS
+
+# Updates the checkout product on the VPS (deploy/update.sh). Started by hand (Actions tab →
+# "Deploy to VPS" → Run workflow) or by Claude. The key in VPS_SSH_KEY can only run that one
+# script as the `checkout` user (forced command made by deploy/install.sh): no shell, no root,
+# nothing of ShipTrack.
+on:
+  workflow_dispatch:
+
+concurrency: deploy-vps
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Update the checkout app on the VPS
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          PORT: ${{ secrets.VPS_SSH_PORT }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then
+            echo "::error::Add the repo secrets VPS_HOST and VPS_SSH_KEY first (printed by deploy/install.sh on the VPS)."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${PORT:-22}" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key -p "${PORT:-22}" -o BatchMode=yes -o ConnectTimeout=20 "checkout@$HOST" deploy

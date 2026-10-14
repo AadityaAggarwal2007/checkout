@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 # Brings the VPS copy of the checkout product to the newest code of its branch and restarts only
-# its own apps (ShipTrack and every other app keep running).   sudo bash /srv/checkout/app/deploy/update.sh
+# its own apps (ShipTrack and every other app keep running). Needs no root: it runs as the
+# `checkout` user (also how GitHub deploys: the deploy key can run only this script).
+#   sudo bash /srv/checkout/app/deploy/update.sh      (or as the checkout user: bash .../update.sh)
 set -euo pipefail
 APP=/srv/checkout/app
 ENV_FILE=/etc/checkout/checkout.env
-[ "$(id -u)" = 0 ] || { echo "run it with sudo"; exit 1; }
+ME=$(id -un)
+[ "$ME" = root ] || [ "$ME" = checkout ] || { echo "run it with sudo (or as the checkout user)"; exit 1; }
 [ -f "$ENV_FILE" ] || { echo "not installed yet: run deploy/install.sh first"; exit 1; }
 # CHECKOUT_EXTRA_CA: only behind a TLS-inspecting proxy (never needed on a normal VPS).
 EXTRA_CA="${CHECKOUT_EXTRA_CA:+export NODE_EXTRA_CA_CERTS=$CHECKOUT_EXTRA_CA GIT_SSL_CAINFO=$CHECKOUT_EXTRA_CA npm_config_cafile=$CHECKOUT_EXTRA_CA;}"
-as_app() { sudo -u checkout -H bash -c "$EXTRA_CA export NVM_DIR=\$HOME/.nvm; . \$NVM_DIR/nvm.sh; $1"; }
+as_app() {
+  if [ "$ME" = checkout ]; then bash -c "$EXTRA_CA export NVM_DIR=\$HOME/.nvm; . \$NVM_DIR/nvm.sh; $1"
+  else sudo -u checkout -H bash -c "$EXTRA_CA export NVM_DIR=\$HOME/.nvm; . \$NVM_DIR/nvm.sh; $1"; fi
+}
 BRANCH=$(as_app "cd $APP && git rev-parse --abbrev-ref HEAD")
 API_PORT=$(grep '^PORT=' "$ENV_FILE" | cut -d= -f2)
 echo "== Code ($BRANCH)"

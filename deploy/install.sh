@@ -198,6 +198,21 @@ if [ -d /run/systemd/system ]; then
   env PATH="$PATH:$NODE_BIN" "$NODE_BIN/pm2" startup systemd -u "$APP_USER" --hp "/home/$APP_USER" >/dev/null && echo "starts again by itself after a reboot (service pm2-$APP_USER)"
 fi
 
+# ------------------------------------------------------------------ deploy key for GitHub
+# A key that can do ONE thing: log in as `checkout` and run deploy/update.sh (forced command,
+# no shell, no forwarding). Its private half goes into the repo's GitHub secret VPS_SSH_KEY.
+DEPLOY_KEY="$ETC/deploy_key"
+NEW_KEY=0
+if [ ! -f "$DEPLOY_KEY" ]; then
+  ssh-keygen -q -t ed25519 -N '' -C "checkout-deploy@$(hostname)" -f "$DEPLOY_KEY"
+  chmod 600 "$DEPLOY_KEY"
+  NEW_KEY=1
+fi
+install -d -m 700 -o "$APP_USER" -g "$APP_USER" "/home/$APP_USER/.ssh"
+AUTH="/home/$APP_USER/.ssh/authorized_keys"
+touch "$AUTH" && chown "$APP_USER:$APP_USER" "$AUTH" && chmod 600 "$AUTH"
+grep -q "checkout-deploy@" "$AUTH" || echo "command=\"/bin/bash $APP/deploy/update.sh\",restrict $(cat "$DEPLOY_KEY.pub")" >> "$AUTH"
+
 # ------------------------------------------------------------------ nginx + https
 if [ "$SKIP_NGINX" = 1 ] || ! command -v nginx >/dev/null; then
   say "nginx not found / skipped: the apps run on 127.0.0.1 only"
@@ -270,3 +285,13 @@ echo "Dashboard     https://$DOMAIN"
 [ "$MODE" = live ] && echo "Live mode: fill the empty keys in $ENV_FILE (sudo nano $ENV_FILE), then: sudo bash $APP/deploy/update.sh"
 echo "Logs          sudo -u $APP_USER -H bash -c '. ~/.nvm/nvm.sh && pm2 logs --lines 50 --nostream'"
 echo "Update later  sudo bash $APP/deploy/update.sh"
+if [ "$NEW_KEY" = 1 ] || [ "${SHOW_DEPLOY_KEY:-0}" = 1 ]; then
+  say "For automatic updates from GitHub (once)"
+  echo "GitHub → checkout repo → Settings → Secrets and variables → Actions → New repository secret:"
+  echo "  VPS_HOST     = $(curl -fsS -4 -m 5 https://api.ipify.org 2>/dev/null || echo '<this server IP>')"
+  echo "  VPS_SSH_KEY  = everything between the two lines below (it can only update the checkout app):"
+  echo "------------------------------------------------------------"
+  cat "$DEPLOY_KEY"
+  echo "------------------------------------------------------------"
+  echo "(Show it again later: sudo cat $DEPLOY_KEY)"
+fi
