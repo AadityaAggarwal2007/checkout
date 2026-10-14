@@ -9,7 +9,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer, request, type IncomingMessage, type ServerResponse } from 'node:http';
 
 interface Variant { variantId: string; productId: string; productTitle: string; title: string; image?: string; price: number; compareAtPrice?: number; available: boolean }
 interface Product { productId: string; title: string; handle: string; image?: string; collectionIds: string[]; variants: Variant[] }
@@ -17,7 +17,13 @@ interface Item { key: string; variantId: string; quantity: number; properties: R
 interface Cart { token: string; note: string; items: Item[] }
 
 const PORT = Number(process.env.PORT ?? 5004);
-const API = process.env.API_URL ?? 'http://localhost:5002';
+/**
+ * PROXY_API (trials in the browser, e.g. Codespaces): this store also passes our server's public
+ * paths (/storefront, /checkout, /webhooks) through to it, so one address serves everything.
+ */
+const PROXY = process.env.PROXY_API || '';
+const API = process.env.API_URL ?? (PROXY ? '' : 'http://localhost:5002');
+const PROXIED = /^\/(storefront|checkout|webhooks)\//;
 const KEY = process.env.WIDGET_KEY ?? 'dev-widget-key';
 const catalog = JSON.parse(readFileSync(new URL('./catalog.json', import.meta.url), 'utf8')) as { products: Product[] };
 const products = catalog.products;
@@ -163,7 +169,25 @@ function svgImage(id: string): string {
 /** Orders our checkout "creates in Shopify" (ORDER_SINK=dev). Memory only. */
 const adminOrders: Array<{ id: string; name: string; at: string; order: Record<string, unknown> }> = [];
 
+function proxy(req: IncomingMessage, res: ServerResponse): void {
+  const target = new URL(req.url ?? '/', PROXY);
+  const upstream = request(
+    target,
+    { method: req.method, headers: { ...req.headers, host: target.host, 'x-forwarded-for': req.socket.remoteAddress ?? '' } },
+    (up) => {
+      res.writeHead(up.statusCode ?? 502, up.headers);
+      up.pipe(res);
+    },
+  );
+  upstream.on('error', () => {
+    res.writeHead(502, { 'content-type': 'text/plain' });
+    res.end('API not reachable');
+  });
+  req.pipe(upstream);
+}
+
 createServer(async (req, res) => {
+  if (PROXY && PROXIED.test(req.url ?? '')) return proxy(req, res);
   try {
     const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
     const path = url.pathname;
@@ -247,4 +271,4 @@ createServer(async (req, res) => {
     const status = (err as { status?: number }).status ?? 500;
     return send(res, status, { status, description: (err as Error).message });
   }
-}).listen(PORT, () => console.log(`Local store on http://localhost:${PORT} (storefront script from ${API})`));
+}).listen(PORT, () => console.log(`Local store on http://localhost:${PORT} (storefront script from ${API || 'this address, passed to ' + PROXY})`));

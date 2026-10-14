@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Writes apps/server/.env for this machine: the addresses the browser uses (Codespaces forwards
 # each port to its own https URL) and random keys made here (never the live server's).
+# In Codespaces the browser reaches our server THROUGH the store's address (the store passes
+# /storefront, /checkout, /webhooks on), so only the store and dashboard ports are ever opened.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ -n "${CODESPACE_NAME:-}" ]; then
@@ -8,6 +10,7 @@ if [ -n "${CODESPACE_NAME:-}" ]; then
 else
   url() { echo "http://localhost:$1"; }
 fi
+if [ -n "${CODESPACE_NAME:-}" ]; then PUBLIC=$(url 5004); else PUBLIC=$(url 5002); fi
 key() { node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"; }
 ENV=apps/server/.env
 # Keep the keys of an earlier run (the database holds data encrypted with them).
@@ -18,7 +21,7 @@ PEP=$(old HASH_PEPPER); [ -n "$PEP" ] || PEP=$(key)
 cat > "$ENV" <<ENVFILE
 NODE_ENV=development
 PORT=5002
-PUBLIC_URL=$(url 5002)
+PUBLIC_URL=$PUBLIC
 DASHBOARD_URL=$(url 5003)
 DATABASE_URL=postgresql://checkout:checkout@localhost:5432/checkout_dev
 JWT_SECRET=$JWT
