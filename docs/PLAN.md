@@ -324,8 +324,21 @@ Store shown: "Kurtiya Store" (our own kurtiya uses FlexyPe now). Gateway PayGloc
    session ends) / (other levels, e.g. per customer); Save Config.
    => All 6 coupon types now seen except Purchase Driven's "User Behaviour" step.
 
-NOT CAPTURED (ask the owner): Billing & Usage page (FlexyPe charges the merchant: "Outstanding payable" card),
-each RTO filter's rule form, an order's detail page, an abandoned checkout's detail,  notifications (bell), Purchase Driven 'User Behaviour' step, integration config screens.
+76-77 ORDER DETAIL (dashboard/orders/<uuid>): header "Order #<Shopify number>" + chips Paid / Unfulfilled + date; Edit,
+   previous / next order arrows. ORDER ITEMS (fulfilment chip): image, title, variant chip ("GOLD / PACK OF 3"), compare-at
+   price struck, unit price × qty, line total, the discount applied to the line ("PREPAID 5% (−₹x)").
+   ORDER SUMMARY (payment chip): Subtotal (n items), Discounts (code, −₹), Shipping (rate NAME + amount: note the rate is
+   named "Free shipping" but the ₹0-199 slab charged ₹30), Total, Paid.
+   Right column: CUSTOMER (name, "1 order" link), contact (email, phone), shipping address, billing address ("same as
+   shipping"). ADDITIONAL DETAILS = attribution saved with the order: Landing page, Original referrer, UTM medium /
+   content / term / campaign / source, fbclid. TRANSACTIONS: Payment · Success, amount, method (UPI), gateway (PayGlocal),
+   gateway transaction ID (copy), time.
+   DB: orders keep landing_page, referrer, utm_* , fbclid (captured when the checkout session starts);
+   transactions table (one order → many attempts / refunds).
+OWNER 2026-10-14: skip for now — Billing & Usage page, RTO "Add Rule" form, Purchase Driven "User Behaviour" step
+   (Claude designs them from the rest; written down when built).
+
+STILL NOT CAPTURED (low priority): an abandoned checkout's detail, notifications (bell), integration config screens.
 ```
 
 ### (b) Add to cart / cart drawer setup
