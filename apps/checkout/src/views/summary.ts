@@ -14,14 +14,20 @@ export function summaryView(app: App): HTMLElement {
   const sum = s.summary;
   return h(
     'section',
-    { class: `ck-summary${open ? ' open' : ''}` },
+    { class: `card ck-summary${open ? ' open' : ''}` },
     h(
       'button',
       { class: 'sum-bar', onclick: toggle, 'aria-expanded': String(open), 'data-test': 'summary-toggle' },
-      h('span', {}, `Order summary · ${sum.itemCount} item${sum.itemCount === 1 ? '' : 's'}`),
-      h('span', { class: 'sum-total' }, h('b', { 'data-test': 'summary-total' }, money(sum.total)), svg(ICONS.down, 'ck-i rot')),
+      h('span', {}, h('b', {}, 'Order summary'), h('span', { class: 'muted' }, ` (${sum.itemCount} Item${sum.itemCount === 1 ? '' : 's'})`)),
+      h(
+        'span',
+        { class: 'sum-total' },
+        sum.savings > 0 ? h('s', {}, money(sum.total + sum.savings)) : null,
+        h('b', { 'data-test': 'summary-total' }, money(sum.total)),
+        svg(open ? ICONS.down : ICONS.chevron, 'ck-i'),
+      ),
     ),
-    sum.savings > 0 ? h('div', { class: 'savings' }, `You are saving ${money(sum.savings)} on this order`) : null,
+    open && sum.savings > 0 ? h('div', { class: 'savings' }, `You are saving ${money(sum.savings)} on this order`) : null,
     open
       ? h(
           'div',

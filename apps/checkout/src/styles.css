@@ -138,3 +138,12 @@ a.btn{text-decoration:none}
 .unlock{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;margin-top:10px;border:0;background:none;color:#374151;font-size:14px;cursor:pointer}
 .upi-wait{display:flex;flex-direction:column;align-items:center;gap:6px}.upi-side .upi-wait{align-items:flex-start}.upi-side .hint{justify-content:flex-start}
 .upi-wait .hint{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;margin:0}
+.upi-body.qr-col{flex-direction:column;align-items:center;gap:14px;text-align:center;font-size:15px;padding:18px 4px 22px}
+.qr-wrap.blur{padding:4px;border:0}.qr-wrap.blur svg{width:120px;height:120px}.qr-wrap.live svg{width:200px;height:200px}
+.show-qr{border-radius:20px;padding:7px 18px;font-size:13px}
+.ck-main>.ck-summary{padding:0;margin-bottom:12px}.ck-summary .sum-bar{padding:14px 16px;font-size:15px}.ck-summary .sum-total{gap:6px}.ck-summary .sum-total s{color:var(--muted);font-size:13px}.ck-summary .sum-body{padding:4px 16px 14px}.ck-summary .savings{margin:0 16px 8px;border-radius:8px}
+.d-contact{flex-direction:row;flex-wrap:wrap;gap:4px 14px}.d-notyou{margin-top:2px;font-size:13px}
+.show-qr{line-height:1.2}
+.upi-logo.phonepe .pe{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#5F259F;color:#fff;font-size:18px;font-weight:700}
+.upi-logo.paytm{font-size:14px;font-style:normal;letter-spacing:-.3px}.upi-logo .pt1{color:#002E6E}.upi-logo .pt2{color:#00B9F1}
+.upi-logo .ck-i,.upi-logo svg{display:block}

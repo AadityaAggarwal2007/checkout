@@ -11,10 +11,20 @@ import { qrSvg } from '../qr.js';
 export const UPI_APPS: Array<{ name: string; scheme: string; mark: string; cls: string }> = [
   { name: 'Google Pay', scheme: 'tez://upi/pay?', mark: 'G', cls: 'gpay' },
   { name: 'PhonePe', scheme: 'phonepe://pay?', mark: 'पे', cls: 'phonepe' },
-  { name: 'Paytm', scheme: 'paytmmp://pay?', mark: 'paytm', cls: 'paytm' },
-  { name: 'CRED UPI', scheme: 'credpay://upi/pay?', mark: 'C', cls: 'cred' },
+  { name: 'Paytm', scheme: 'paytmmp://pay?', mark: '', cls: 'paytm' },
+  { name: 'CRED UPI', scheme: 'credpay://upi/pay?', mark: '', cls: 'cred' },
   { name: 'Others', scheme: 'upi://pay?', mark: '+', cls: 'other' },
 ];
+
+/** Plain marks drawn here (no downloaded logos): Google's four colours, PhonePe's purple, Paytm's two blues, CRED's shield. */
+function logo(a: (typeof UPI_APPS)[number]): HTMLElement {
+  if (a.cls === 'gpay')
+    return h('span', { class: 'upi-logo gpay' }, svg(ICONS.gpay));
+  if (a.cls === 'paytm') return h('span', { class: 'upi-logo paytm' }, h('b', { class: 'pt1' }, 'pay'), h('b', { class: 'pt2' }, 'tm'));
+  if (a.cls === 'cred')
+    return h('span', { class: 'upi-logo cred' }, svg(ICONS.cred));
+  return h('span', { class: `upi-logo ${a.cls}` }, h('span', { class: 'pe' }, a.mark));
+}
 
 /** Drawn blurred behind "Show QR": not a payment, nothing to scan. */
 const PLACEHOLDER = 'SHOW QR TO PAY';
@@ -24,7 +34,7 @@ const mmss = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
-const tileFace = (a: (typeof UPI_APPS)[number]) => [h('span', { class: `upi-logo ${a.cls}` }, a.mark), h('span', { class: 'upi-name' }, a.name)];
+const tileFace = (a: (typeof UPI_APPS)[number]) => [logo(a), h('span', { class: 'upi-name' }, a.name)];
 
 /**
  * "UPI payment" at the top of "Pay via", open by default (Shiprocket style).
@@ -84,14 +94,14 @@ function idleBody(app: App, m: CheckoutMethod): HTMLElement {
   }
   return h(
     'div',
-    { class: 'upi-body' },
+    { class: 'upi-body qr-col' },
+    h('div', {}, 'Scan the QR code & pay via any UPI app'),
     h(
       'div',
       { class: 'qr-wrap blur' },
-      qrSvg(PLACEHOLDER, 140),
+      qrSvg(PLACEHOLDER, 120),
       h('button', { class: 'show-qr', 'data-test': 'show-qr', disabled: !!app.ui.busy, onclick: () => void app.pay(m) }, busy ? 'Loading…' : 'Show QR'),
     ),
-    h('div', { class: 'upi-side' }, h('b', {}, 'Scan the QR code & pay via any UPI app'), h('span', { class: 'muted small' }, 'Google Pay, PhonePe, Paytm, CRED & more')),
   );
 }
 
@@ -126,14 +136,10 @@ function liveBody(app: App, m: CheckoutMethod, intent: string, expiresAt: number
   }
   return h(
     'div',
-    { class: 'upi-body', 'data-test': 'upi-inline' },
-    h('div', { class: 'qr-wrap live' }, qrSvg(intent, 180)),
-    h(
-      'div',
-      { class: 'upi-side' },
-      h('b', {}, 'Scan the QR code & pay via any UPI app'),
-      h('span', { class: 'muted small' }, `Amount ${money(m.payNow)}. This page updates by itself once you pay.`),
-      waiting,
-    ),
+    { class: 'upi-body qr-col', 'data-test': 'upi-inline' },
+    h('div', {}, 'Scan the QR code & pay via any UPI app'),
+    h('div', { class: 'qr-wrap live' }, qrSvg(intent, 200)),
+    h('span', { class: 'muted small' }, `Amount ${money(m.payNow)} · Google Pay, PhonePe, Paytm, CRED & more`),
+    waiting,
   );
 }

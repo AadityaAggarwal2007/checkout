@@ -8,16 +8,11 @@ import { addressLine, notYou } from './address.js';
 import { upiSection } from './upi.js';
 import { upsellView } from './upsell.js';
 
+/** Shiprocket's order: UPI, Net Banking, Card, Wallets, then the rest; cash last. */
+const ORDER = ['upi', 'netbanking', 'card', 'wallet', 'emi', 'pay_later', 'partial_cod', 'cod'];
+
 const ICON: Record<string, string> = { upi: ICONS.upi, card: ICONS.card, netbanking: ICONS.bank, wallet: ICONS.wallet, emi: ICONS.card, pay_later: ICONS.wallet, cod: ICONS.cash, partial_cod: ICONS.cash };
 
-const SUB: Record<string, string> = {
-  upi: 'Google Pay, PhonePe, Paytm & more',
-  card: 'Visa, Mastercard, RuPay',
-  netbanking: 'All major banks',
-  wallet: 'Paytm, Mobikwik & more',
-  emi: 'Easy monthly instalments',
-  pay_later: 'Simpl, LazyPay & more',
-};
 
 /** Step 3: where it goes, offers, and one row per payment method (tap = pay). */
 export function paymentView(app: App): HTMLElement {
@@ -38,7 +33,7 @@ export function paymentView(app: App): HTMLElement {
           prepaidBanner(s.methods),
           // UPI first and open (QR inside the page) when the gateway can do it; every other method is a row.
           ...[...s.methods]
-            .sort((a, b) => Number(b.method === 'upi' && !!s.inlineUpi) - Number(a.method === 'upi' && !!s.inlineUpi))
+            .sort((a, b) => ORDER.indexOf(a.method) - ORDER.indexOf(b.method))
             .map((m) => (m.method === 'upi' && s.inlineUpi ? upiSection(app, m, sameSaving(s.methods)) : methodRow(app, m, sameSaving(s.methods)))),
           s.methods.length === 0 ? h('p', { class: 'muted' }, 'No payment method is available for this order. Please contact the store.') : null,
           !s.methods.some((m) => m.method === 'cod') && s.codReasons.length ? h('p', { class: 'muted small' }, s.codReasons[0]!) : null,
@@ -73,7 +68,7 @@ function methodRow(app: App, m: CheckoutMethod, savingInBanner: boolean): HTMLEl
       ? m.codFee > 0
         ? `Includes ${money(m.codFee)} COD charge`
         : 'Pay when your order arrives'
-      : SUB[m.method] ?? '';
+      : '';
   const onclick = () => {
     if (cash && app.state.settings.codConfirm) {
       app.ui.confirmCod = m;
@@ -85,7 +80,7 @@ function methodRow(app: App, m: CheckoutMethod, savingInBanner: boolean): HTMLEl
     'button',
     { class: 'method', 'data-test': `method-${m.method}`, disabled: !!app.ui.busy, onclick },
     h('span', { class: 'm-icon' }, svg(ICON[m.method] ?? ICONS.card)),
-    h('span', { class: 'm-text' }, h('b', {}, app.state.settings.methodLabels[m.method] || METHOD_LABELS[m.method] || m.method), h('span', { class: 'muted' }, sub), m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
+    h('span', { class: 'm-text' }, h('b', {}, app.state.settings.methodLabels[m.method] || METHOD_LABELS[m.method] || m.method), sub ? h('span', { class: 'muted' }, sub) : null, m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
     h('span', { class: 'm-price' }, h('b', {}, money(partial ? m.payNow : m.total)), partial ? h('span', { class: 'muted small' }, 'now') : null),
     svg(ICONS.chevron),
   );
@@ -128,6 +123,15 @@ function codConfirm(app: App, m: CheckoutMethod): HTMLElement {
 
 const deliveryLabel = (l: string) => (!l || /^shipping$/i.test(l) ? 'Standard delivery' : /delivery/i.test(l) ? l : `${l} delivery`);
 
+/** "4-6 days" -> the last day of that range, "Friday, Oct 16" (India time). */
+export function deliveryBy(eta: string | undefined, now = Date.now()): string | undefined {
+  const days = eta?.match(/(\d+)\s*(?:-|to|–)?\s*(\d+)?\s*(business\s+)?days?/i);
+  if (!days) return undefined;
+  const n = Number(days[2] ?? days[1]);
+  if (!Number.isFinite(n) || n < 0 || n > 60) return undefined;
+  return new Date(now + n * 86_400_000).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' });
+}
+
 /** Delivery details (Shiprocket style): who and where, then the delivery line. */
 function deliveryCard(app: App): HTMLElement {
   const s = app.state;
@@ -145,7 +149,8 @@ function deliveryCard(app: App): HTMLElement {
     ),
     h('div', { class: 'd-name' }, h('b', {}, a.name), a.tag ? h('span', { class: 'tagchip' }, a.tag.charAt(0) + a.tag.slice(1).toLowerCase()) : null),
     h('div', { class: 'd-addr' }, addressLine(a)),
-    h('div', { class: 'd-contact muted' }, h('span', {}, svg(ICONS.phone), formatPhone(s.customer?.phone ?? '')), email ? h('span', {}, svg(ICONS.mail), email) : null, notYou(app)),
+    h('div', { class: 'd-contact muted' }, h('span', {}, svg(ICONS.phone), formatPhone(s.customer?.phone ?? '')), email ? h('span', {}, svg(ICONS.mail), email) : null),
+    h('div', { class: 'd-notyou' }, notYou(app)),
     h(
       'div',
       { class: 'd-ship' },
@@ -153,7 +158,7 @@ function deliveryCard(app: App): HTMLElement {
       h(
         'div',
         {},
-        h('div', {}, h('b', {}, deliveryLabel(sum.shippingLabel)), sum.shippingEta ? `: ${sum.shippingEta}` : null),
+        h('div', {}, h('b', {}, `${deliveryLabel(sum.shippingLabel)}:`), ' ', deliveryBy(sum.shippingEta) ?? sum.shippingEta ?? ''),
         h('div', { class: sum.shipping === 0 ? 'free' : 'muted small' }, sum.shipping === 0 ? 'Free shipping for you' : `Shipping ${money(sum.shipping)}`),
       ),
     ),

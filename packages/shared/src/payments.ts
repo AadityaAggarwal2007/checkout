@@ -38,8 +38,8 @@ export const GATEWAYS: Record<GatewayProviderKey, { name: string; fields: Gatewa
 /** Online methods a store can route to a gateway (cash methods need no gateway, partial COD uses the UPI route). */
 export const ONLINE_METHOD_LABELS = {
   upi: 'UPI',
-  card: 'Debit / Credit card',
-  netbanking: 'Net banking',
+  card: 'Credit/Debit Card',
+  netbanking: 'Net Banking',
   wallet: 'Wallets',
   emi: 'EMI',
   pay_later: 'Pay later',
