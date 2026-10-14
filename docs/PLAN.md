@@ -102,6 +102,16 @@ server syntax + `prisma generate` OK):
 4. **Billing:** **1% of every successful order** (paid, or COD confirmed). Cancelled / failed / refunded orders are not
    charged. Rate stored per store so it can change later.
 
+## Decisions 2026-10-14 (after the screenshots)
+
+1. **Server:** the ShipTrack Hostinger VPS, as a separate app with its own database (domain like cart.shiptrack.store).
+2. **Next step:** Claude writes the FULL DESIGN first (screens, flows, database tables, build order); the owner approves;
+   only then code.
+3. **Address by phone number:** the owner has a video of FlexyPe's mobile flow where the saved address is fetched from the
+   customer's phone number. OPEN: how to do this without the privacy leak (problem 2). Claude's position: a phone number
+   alone must never show someone's address; it needs a check that the shopper owns the number (OTP by WhatsApp / SMS, or
+   masked address until verified). Waiting for the video and the owner's call.
+
 ## Design rules decided while reading FlexyPe (keep when building)
 
 1. **A shipping charge is never shown under a "Free" name** (owner 2026-10-14, from FlexyPe order #2246: the rate was
