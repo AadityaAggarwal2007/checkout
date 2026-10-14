@@ -103,7 +103,8 @@ if ! as_app 'command -v nvm' >/dev/null 2>&1; then
   as_app 'mkdir -p "$NVM_DIR" && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | PROFILE=/dev/null bash >/dev/null'
 fi
 as_app "nvm install $NODE_MAJOR >/dev/null && nvm alias default $NODE_MAJOR >/dev/null && node -v"
-as_app 'command -v pm2 >/dev/null || npm install -g pm2@5.4.3 --no-audit --no-fund >/dev/null'
+# Our own PM2 inside our Node (a server-wide pm2, e.g. ShipTrack's, must not be the one used).
+as_app '[ -x "$(dirname "$(command -v node)")/pm2" ] || npm install -g pm2@5.4.3 --no-audit --no-fund >/dev/null'
 NODE_BIN=$(as_app 'dirname "$(command -v node)"')
 
 # ------------------------------------------------------------------ code
@@ -208,7 +209,8 @@ fi
 
 # ------------------------------------------------------------------ run
 say "Starting the apps (PM2 of user $APP_USER)"
-as_app "cd $APP && pm2 startOrReload deploy/ecosystem.config.cjs --update-env >/dev/null && pm2 save >/dev/null && pm2 ls"
+# `pm2 update` moves a daemon started by another pm2 binary (an earlier run) onto ours; apps keep running.
+as_app "cd $APP && pm2 update >/dev/null 2>&1; pm2 startOrReload deploy/ecosystem.config.cjs --update-env >/dev/null && pm2 save >/dev/null && pm2 ls"
 if [ -d /run/systemd/system ]; then
   env PATH="$PATH:$NODE_BIN" "$NODE_BIN/pm2" startup systemd -u "$APP_USER" --hp "/home/$APP_USER" >/dev/null && echo "starts again by itself after a reboot (service pm2-$APP_USER)"
 fi
