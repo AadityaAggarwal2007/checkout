@@ -1,4 +1,5 @@
 import type { Order, OrderLine, PrismaClient } from '@prisma/client';
+import type { ConnectedStores } from '../catalog/per-store.js';
 import type { Env } from '../env.js';
 import type { Keyring } from '../lib/crypto.js';
 import type { FetchLike } from '../payments/types.js';
@@ -128,6 +129,11 @@ export class DevOrderSink implements OrderSink {
   }
 }
 
-export function orderSinkFrom(env: Env, prisma: PrismaClient, keyring: Keyring): OrderSink {
-  return env.ORDER_SINK === 'dev' ? new DevOrderSink(env.DEV_STORE_INTERNAL_URL ?? env.DEV_STORE_URL) : new ShopifyOrderSink(prisma, keyring, env.SHOPIFY_API_VERSION);
+export function orderSinkFrom(env: Env, prisma: PrismaClient, keyring: Keyring, stores?: ConnectedStores): OrderSink {
+  const shopify = new ShopifyOrderSink(prisma, keyring, env.SHOPIFY_API_VERSION);
+  if (env.ORDER_SINK !== 'dev') return shopify;
+  const dev = new DevOrderSink(env.DEV_STORE_INTERNAL_URL ?? env.DEV_STORE_URL);
+  if (!stores) return dev;
+  // Demo server: a store connected to Shopify gets real Shopify orders, the demo store the local one.
+  return { create: async (order, shopDomain, storeId) => ((await stores.connected(storeId)) ? shopify : dev).create(order, shopDomain, storeId) };
 }

@@ -1,6 +1,7 @@
 import { pincodeLookupFrom } from './address/pincode.js';
 import { buildApp } from './app.js';
 import { DevCatalog } from './catalog/dev.js';
+import { ConnectedStores, PerStoreCatalog } from './catalog/per-store.js';
 import { ShopifyCatalog } from './catalog/shopify.js';
 import { loadEnv } from './env.js';
 import { Keyring } from './lib/crypto.js';
@@ -15,8 +16,11 @@ import { GatewayRegistry } from './payments/registry.js';
 const env = loadEnv();
 const prisma = db();
 const keyring = new Keyring(env.ENCRYPTION_KEYS);
-const catalog = env.CATALOG === 'dev' ? new DevCatalog(env.DEV_CATALOG_FILE, env.DEV_STORE_URL) : new ShopifyCatalog(prisma, keyring, env.SHOPIFY_API_VERSION);
-const orderSink = orderSinkFrom(env, prisma, keyring);
+const shopifyCatalog = new ShopifyCatalog(prisma, keyring, env.SHOPIFY_API_VERSION);
+// Demo server: the demo store uses the local catalog, a store connected to Shopify uses Shopify.
+const connectedStores = new ConnectedStores(prisma);
+const catalog = env.CATALOG === 'dev' ? new PerStoreCatalog(connectedStores, new DevCatalog(env.DEV_CATALOG_FILE, env.DEV_STORE_URL), shopifyCatalog) : shopifyCatalog;
+const orderSink = orderSinkFrom(env, prisma, keyring, connectedStores);
 const app = await buildApp(
   {
     catalog,
