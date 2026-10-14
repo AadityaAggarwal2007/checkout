@@ -79,6 +79,18 @@ sudo bash /srv/checkout/app/deploy/update.sh
 ```
 Sirf checkout ke apps restart hote hain. ShipTrack ko kuch nahi hota.
 
+**Koi key daalni ho (Shopify, WhatsApp, …):** file kholo mat (screen par secrets dikhte hain). Yeh chalao, value
+paste karo, kuch dikhega nahi:
+```bash
+sudo bash /srv/checkout/app/deploy/set-key.sh SHOPIFY_API_KEY
+```
+Saari keys ke baad: `sudo bash /srv/checkout/app/deploy/update.sh`.
+
+**Secrets kahin dikh gaye (screenshot, chat)?** Naye bana do (sab ko dobara login karna padega):
+```bash
+sudo bash /srv/checkout/app/deploy/rotate-secrets.sh
+```
+
 **Logs dekhne ho:**
 ```bash
 sudo -u checkout -H bash -c '. ~/.nvm/nvm.sh && pm2 ls && pm2 logs --lines 50 --nostream'
