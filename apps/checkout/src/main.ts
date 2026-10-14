@@ -1,5 +1,6 @@
 import { App } from './app.js';
 import { setView } from './bridge.js';
+import { startPreview } from './preview.js';
 import './styles.css';
 
 /**
@@ -26,5 +27,5 @@ try {
 if (fromHash) history.replaceState(null, '', location.pathname);
 
 const root = document.getElementById('app')!;
-const app = new App(root, token ?? '');
-void app.start();
+if (root.hasAttribute('data-preview')) startPreview(root);
+else void new App(root, token ?? '').start();

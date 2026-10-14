@@ -59,6 +59,7 @@ export function api(token: string) {
     editAddress: () => call<S>('POST', '/checkout/api/address/edit', {}),
     pincode: (pin: string) => call<{ city: string; state: string }>('GET', `/checkout/api/pincode/${pin}`),
     upsell: (change: { variantId?: string; lineId?: string }) => call<S>('POST', '/checkout/api/upsell', change),
+    exit: (reason: string) => call<{ ok: true }>('POST', '/checkout/api/exit', { reason }),
     coupon: (change: { add?: string; remove?: string }) => call<S>('POST', '/checkout/api/coupon', change),
     pay: (method: string, expectedTotal: number) => call<S & { pay: PayStart | null }>('POST', '/checkout/api/pay', { method, expectedTotal }),
     cancelPayment: () => call<S>('POST', '/checkout/api/pay/cancel', {}),

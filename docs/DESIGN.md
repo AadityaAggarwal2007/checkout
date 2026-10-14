@@ -168,7 +168,7 @@ The full schema lives in `apps/server/prisma/schema.prisma`; this table is its m
 | 1 | Storefront loader + drawer (port + TS), drawer config API + dashboard pages with live preview, theme app embed | ✅ 2026-10-14 on the local test store (a real Shopify dev store waits for the Partner account) |
 | 2 | Checkout: session, shipping, address, WhatsApp OTP, PayGlocal + PayU (verified), COD / partial COD, Shopify order, thank-you | a real test order on a dev store, paid and COD — ✅ built and tested on localhost 2026-10-14 (fake WhatsApp / gateway / Shopify); the real test order waits for the owner's accounts (§8) |
 | 3 | Coupon engine (all types + payment offers) in drawer and checkout, free gifts, B1G1, bundles | rule tests + same totals in drawer, checkout and Shopify order — ✅ 2026-10-14 (wizard for all 6 kinds + payment offers, list with stats, shopper coupon cards; totals tests per kind) |
-| 4 | RTO suite, upsell rules + timer, exit flow, checkout design tabs with preview | |
+| 4 | RTO suite, upsell rules + timer, exit flow, checkout design tabs with preview | ✅ 2026-10-14: RTO rules (10 kinds, all / top-rule mode) hide COD in the checkout; upsell offers on the payment step (WHEN any / products / collections → products, % off locked when added, timer from first view, audience, priority; SHOW = products, a collection is a later step); exit popup (savings reminder / message / survey with answer counts); Checkout design (logo URL, colours, step banners, method order / names / hiding, trust badges) with live preview |
 | 5 | Dashboard home + funnel, orders, abandoned checkouts, Meta Pixel, logs, users, API keys | |
 | 6 | Billing (1%), go-live checklist, load test, security review | owner's go-live |
 

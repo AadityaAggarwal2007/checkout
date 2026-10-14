@@ -79,3 +79,28 @@ test('merchant adds an upsell', async ({ page }) => {
   await page.click('[data-test=save-upsell]');
   await expect(page.locator('[data-test=upsell-row]')).toHaveCount(2);
 });
+
+test('merchant designs the checkout: live preview, then the real checkout shows it', async ({ page }) => {
+  await login(page);
+  await page.click('a:has-text("Checkout design")');
+  await page.click('[data-test=tab-login]');
+  await page.getByPlaceholder('e.g. Free delivery on prepaid orders').fill('Prepaid orders ship in 24 hours');
+  const preview = page.frameLocator('iframe[title="Checkout preview"]');
+  await expect(preview.locator('[data-test=banner]')).toHaveText('Prepaid orders ship in 24 hours');
+  await page.click('[data-test=tab-exit]');
+  await page.getByText('Exit survey').click();
+  await expect(preview.locator('[data-test=exit-popup]')).toContainText('why are you leaving');
+  await page.click('[data-test=save-design]');
+  await expect(page.getByText('Saved — live in your checkout')).toBeVisible();
+
+  await page.goto(`${STORE}/products/cotton-straight-kurti`);
+  await page.waitForFunction(() => 'CheckoutDrawer' in window);
+  await page.click('button[name=add]');
+  await page.locator('#ck-cart-drawer .ck-cta').click();
+  const f = page.frameLocator('#ck-checkout iframe');
+  await expect(f.locator('[data-test=banner]')).toHaveText('Prepaid orders ship in 24 hours');
+  await f.locator('[data-test=close]').click();
+  await f.locator('[data-test=exit-reason]').first().click();
+  await f.locator('[data-test=exit-leave]').click();
+  await expect(page.locator('#ck-checkout')).toHaveCount(0);
+});

@@ -6,6 +6,7 @@ import { addressView } from './views/address.js';
 import { headerView, footerView } from './views/layout.js';
 import { loginView } from './views/login.js';
 import { paymentView } from './views/payment.js';
+import { exitView, wantsExitPrompt } from './views/exit.js';
 import { doneView, processingView } from './views/status.js';
 import { summaryView } from './views/summary.js';
 
@@ -25,12 +26,22 @@ export interface Ui {
   couponOpen: boolean;
   summaryOpen: boolean;
   confirmCod?: CheckoutMethod;
+  /** Exit popup: shown once per visit. */
+  exitOpen?: boolean;
+  exitAsked?: boolean;
+  exitReason?: string;
   /** Upsell: the option picked per offered product. */
   upsellVariant: Record<string, string>;
   /** Gateway URL of the open payment (desktop: "Reopen payment page"). */
   payUrl?: string;
   busy?: string;
   notice?: { kind: 'error' | 'info'; text: string };
+}
+
+function bannerView(s: CheckoutState): HTMLElement | null {
+  const step = s.step === 'login' || s.step === 'address' || s.step === 'payment' ? s.step : null;
+  const text = step ? s.settings.banners[step] : undefined;
+  return text ? h('div', { class: 'banner', 'data-test': 'banner' }, text) : null;
 }
 
 export class App {
@@ -167,9 +178,19 @@ export class App {
     await this.run('cancel', async () => this.set((await this.api.cancelPayment()).state));
   }
 
-  close(): void {
+  /** The X: asks once (exit popup per the merchant's settings), then goes back to the store. */
+  close(force = false): void {
+    if (!force && wantsExitPrompt(this)) {
+      this.ui.exitAsked = true;
+      this.ui.exitOpen = true;
+      return this.render();
+    }
+    if (this.preview) return;
     close(this.state?.store.url ?? '/');
   }
+
+  /** Dashboard live preview: sample data, no server calls. */
+  preview = false;
 
   // ---------------------------------------------------------------- render
 
@@ -220,8 +241,9 @@ export class App {
         headerView(this),
         s.step === 'done' ? null : summaryView(this),
         this.ui.notice ? h('div', { class: `notice ${this.ui.notice.kind}`, role: 'alert' }, this.ui.notice.text) : null,
-        h('main', { class: 'ck-main' }, body),
+        h('main', { class: 'ck-main' }, bannerView(s), body),
         footerView(this),
+        this.ui.exitOpen ? exitView(this) : null,
       ),
     );
     // Keep the cursor where the shopper was typing.

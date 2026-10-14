@@ -165,7 +165,15 @@ export class CheckoutService {
         logoUrl: ctx.settings.logoUrl,
         colors: ctx.settings.colors,
       },
-      settings: { askEmail: ctx.settings.askEmail, payButtonText: ctx.settings.payButtonText, codConfirm: ctx.rules.settings.codConfirmPopup },
+      settings: {
+        askEmail: ctx.settings.askEmail,
+        payButtonText: ctx.settings.payButtonText,
+        codConfirm: ctx.rules.settings.codConfirmPopup,
+        methodLabels: ctx.settings.methodLabels,
+        banners: ctx.settings.banners,
+        trustBadges: ctx.settings.trustBadges,
+        exit: ctx.settings.exit,
+      },
       customer: customer ? { phone: customer.phone, name: customer.name ?? undefined, email: customer.email ?? undefined } : null,
       addresses: addresses.map((a) => ({
         id: a.id,

@@ -10,6 +10,9 @@ import { INDIAN_STATES } from './india.js';
 
 export { INDIAN_STATES, matchState, normalizeIndianMobile, maskPhone } from './india.js';
 
+export const CHECKOUT_METHODS = ['upi', 'card', 'netbanking', 'wallet', 'emi', 'pay_later', 'cod', 'partial_cod'] as const;
+export const EXIT_REASONS = ['Just checking the price', 'Delivery takes too long', 'Shipping is too costly', 'Want Cash on Delivery', 'Will order later', 'Something else'];
+
 /** Merchant settings for the checkout page (CheckoutConfig.config). Phase 4 adds the design tabs. */
 export const checkoutSettingsSchema = z
   .object({
@@ -25,10 +28,26 @@ export const checkoutSettingsSchema = z
     askEmail: z.enum(['hidden', 'optional', 'required']).default('optional'),
     /** Order and visibility of payment methods in the list. */
     methodOrder: z
-      .array(z.enum(['upi', 'card', 'netbanking', 'wallet', 'emi', 'pay_later', 'cod', 'partial_cod']))
+      .array(z.enum(CHECKOUT_METHODS))
       .default(['upi', 'card', 'netbanking', 'wallet', 'emi', 'pay_later', 'partial_cod', 'cod']),
     hiddenMethods: z.array(z.string()).default([]),
     payButtonText: z.string().trim().max(40).default('Pay now'),
+    /** Own names for methods in the list ("UPI (fastest)"). */
+    methodLabels: z.record(z.enum(CHECKOUT_METHODS), z.string().trim().max(30)).default({}),
+    /** A short line on top of each step ("Free delivery on prepaid orders"). */
+    banners: z
+      .object({ login: z.string().trim().max(120).optional(), address: z.string().trim().max(120).optional(), payment: z.string().trim().max(120).optional() })
+      .default({}),
+    trustBadges: z.boolean().default(true),
+    /** What the shopper sees when closing the checkout before ordering. */
+    exit: z
+      .object({
+        mode: z.enum(['off', 'default', 'savings', 'survey']).default('savings'),
+        title: z.string().trim().min(1).max(60).default('Wait! Your order is almost done'),
+        text: z.string().trim().max(160).default('Your items are saved. It takes a few seconds to finish.'),
+        reasons: z.array(z.string().trim().min(1).max(40)).min(2).max(6).default(EXIT_REASONS),
+      })
+      .default({}),
   })
   .default({});
 export type CheckoutSettings = z.infer<typeof checkoutSettingsSchema>;
@@ -116,7 +135,15 @@ export interface CheckoutState {
   id: string;
   step: CheckoutStep;
   store: { name: string; url: string; poweredBy?: string; logoUrl?: string; colors: CheckoutSettings['colors'] };
-  settings: { askEmail: CheckoutSettings['askEmail']; payButtonText: string; codConfirm: boolean };
+  settings: {
+    askEmail: CheckoutSettings['askEmail'];
+    payButtonText: string;
+    codConfirm: boolean;
+    methodLabels: CheckoutSettings['methodLabels'];
+    banners: CheckoutSettings['banners'];
+    trustBadges: boolean;
+    exit: CheckoutSettings['exit'];
+  };
   /** Only after OTP on this device. */
   customer: { phone: string; name?: string; email?: string } | null;
   addresses: CheckoutAddress[];

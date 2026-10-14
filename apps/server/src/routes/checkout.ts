@@ -91,6 +91,22 @@ export function checkoutRoutes(app: FastifyInstance): void {
       );
   });
 
+  /** Live preview for Dashboard > Checkout design: the real page with sample data (no store, no shopper). */
+  app.get('/checkout/preview', async (_req, reply) => {
+    const js = await asset('app.js');
+    const version = js ? sha256Hex(js).slice(0, 10) : '0';
+    return reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('cache-control', 'no-store')
+      .header('x-content-type-options', 'nosniff')
+      .header('content-security-policy', "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'; frame-ancestors 'self'; form-action 'none'; base-uri 'none'")
+      .send(
+        `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+          `<title>Checkout preview</title><link rel="stylesheet" href="/checkout/assets/app.css?v=${version}"></head>` +
+          `<body><div id="app" data-preview></div><script src="/checkout/assets/app.js?v=${version}"></script></body></html>`,
+      );
+  });
+
   // ------------------------------------------------------------ page API
 
   type Ctx = { session: SessionWithStore; device?: string };
@@ -204,6 +220,21 @@ export function checkoutRoutes(app: FastifyInstance): void {
     if (body.data.variantId) await service.addUpsell(ctx.session, customer, body.data.variantId);
     else await service.removeUpsell(ctx.session, body.data.lineId!);
     return send(reply, { state: await service.state(ctx.session, customer) });
+  });
+
+  /** Exit survey: why the shopper left (one answer per checkout; no personal data). */
+  const exitBody = z.object({ reason: z.string().trim().min(1).max(40), comment: z.string().trim().max(300).optional() });
+  app.post('/checkout/api/exit', limit(10), async (req, reply) => {
+    const ctx = await auth(req);
+    const body = exitBody.safeParse(req.body);
+    if (!body.success) throw badRequest('Choose a reason.');
+    const { settings } = await service.context(ctx.session, null);
+    if (!settings.exit.reasons.includes(body.data.reason)) throw badRequest('Choose a reason.');
+    const done = await prisma.exitSurveyResponse.findFirst({ where: { sessionId: ctx.session.id }, select: { id: true } });
+    if (!done && !ctx.session.completedAt) {
+      await prisma.exitSurveyResponse.create({ data: { storeId: ctx.session.storeId, sessionId: ctx.session.id, reason: body.data.reason, comment: body.data.comment || null } });
+    }
+    return send(reply, { ok: true });
   });
 
   const payBody = z.object({ method: z.enum(PAYMENT_METHODS), expectedTotal: z.number().int().min(0) });

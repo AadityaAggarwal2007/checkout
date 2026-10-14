@@ -49,6 +49,9 @@ export function paymentView(app: App): HTMLElement {
           s.methods.length === 0 ? h('p', { class: 'muted' }, 'No payment method is available for this order. Please contact the store.') : null,
           !s.methods.some((m) => m.method === 'cod') && s.codReasons.length ? h('p', { class: 'muted small' }, s.codReasons[0]!) : null,
         ),
+    s.settings.trustBadges && !s.unserviceable
+      ? h('div', { class: 'trust', 'data-test': 'trust' }, ...['100% secure payment', 'Encrypted & safe', 'Verified with OTP'].map((t) => h('span', {}, svg(ICONS.lock), t)))
+      : null,
     app.ui.confirmCod ? codConfirm(app, app.ui.confirmCod) : null,
   );
 }
@@ -87,7 +90,7 @@ function methodRow(app: App, m: CheckoutMethod, savingInBanner: boolean): HTMLEl
   return h(
     'button',
     { class: 'method', 'data-test': `method-${m.method}`, disabled: !!app.ui.busy, onclick },
-    h('span', { class: 'm-text' }, h('b', {}, METHOD_LABELS[m.method] ?? m.method), h('span', { class: 'muted' }, sub), m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
+    h('span', { class: 'm-text' }, h('b', {}, app.state.settings.methodLabels[m.method] || METHOD_LABELS[m.method] || m.method), h('span', { class: 'muted' }, sub), m.extraSaving > 0 && !savingInBanner ? h('span', { class: 'save' }, `Save ${money(m.extraSaving)}`) : null),
     h('span', { class: 'm-price' }, h('b', {}, money(partial ? m.payNow : m.total)), partial ? h('span', { class: 'muted small' }, 'now') : null),
     svg(ICONS.chevron),
   );

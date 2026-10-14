@@ -108,6 +108,9 @@ test('a returning shopper on the same browser skips OTP and the address', async 
   await login(page, f, newPhone());
   await address(f);
   await f.locator('[data-test=close]').click();
+  // The exit popup reminds once (default: savings reminder); "Leave" closes.
+  await expect(f.locator('[data-test=exit-popup]')).toBeVisible();
+  await f.locator('[data-test=exit-leave]').click();
   await expect(page.locator('#ck-checkout')).toHaveCount(0);
   await page.evaluate(() => (window as unknown as { CheckoutDrawer: { open(): void } }).CheckoutDrawer.open());
   await page.locator('#ck-cart-drawer .ck-cta').click();
