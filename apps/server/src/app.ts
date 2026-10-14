@@ -17,6 +17,7 @@ import { publicApiRoutes } from './routes/public-api.js';
 import { goLiveRoutes } from './routes/golive.js';
 import { settingsRoutes } from './routes/settings.js';
 import { designRoutes } from './routes/design.js';
+import { quickSetupRoutes } from './routes/quick-setup.js';
 import { rtoRoutes } from './routes/rto.js';
 import { upsellRoutes } from './routes/upsell.js';
 import { shippingRoutes } from './routes/shipping.js';
@@ -94,6 +95,7 @@ export async function buildApp(deps: Deps, opts: { logger?: boolean } = {}): Pro
   shippingRoutes(app);
   rtoRoutes(app);
   designRoutes(app);
+  quickSetupRoutes(app);
   analyticsRoutes(app);
   abandonedRoutes(app);
   settingsRoutes(app);

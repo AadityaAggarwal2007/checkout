@@ -19,6 +19,7 @@ export default function Overview() {
         <p className="text-ink-3">Your cart drawer and checkout, in one place.</p>
       </div>
       <GoLive storeId={store.id} />
+      <ShiprocketLook storeId={store.id} />
       <AnalyticsPanel storeId={store.id} />
       <h2 className="pt-2 text-lg font-semibold">Setup</h2>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -49,6 +50,28 @@ export default function Overview() {
         <span className="text-xl">→</span>
       </Link>
     </div>
+  );
+}
+
+/** One click: the maroon & gold Shiprocket look on the cart drawer and the checkout (looks only, no offers). */
+function ShiprocketLook({ storeId }: { storeId: string }) {
+  const [busy, setBusy] = useState(false);
+  const apply = () => {
+    setBusy(true);
+    api(`/api/stores/${storeId}/quick-setup/shiprocket-look`, { method: 'POST', body: {} })
+      .then(() => toast('Done — your cart drawer and checkout now have the Shiprocket look'), (e: Error) => toast(e.message, 'err'))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <section className="card flex flex-wrap items-center justify-between gap-3 p-5" data-test="shiprocket-look">
+      <span>
+        <span className="block font-semibold">Make it look like Shiprocket</span>
+        <span className="text-ink-3">Maroon &amp; gold colours, Hurry timer, moving offer strip, “Buy Now” with “Limited Offer”. Your offers and prices stay as they are.</span>
+      </span>
+      <button className="btn-primary" disabled={busy} onClick={apply}>
+        {busy ? 'Applying…' : 'Apply in one click'}
+      </button>
+    </section>
   );
 }
 
