@@ -272,7 +272,9 @@ export function checkoutRoutes(app: FastifyInstance): void {
       return gatewayPostPage(reply, start.url, start.fields);
     } catch (err) {
       req.log.warn({ err, ref }, 'gateway start failed');
-      await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { status: 'FAILED', raw: { problem: 'start failed' } } });
+      // The gateway's own words (e.g. "PayGlocal initiate failed (401): Authentication failed") help the merchant fix the keys.
+      const why = err instanceof Error ? err.message.slice(0, 300) : 'unknown';
+      await prisma.paymentTransaction.update({ where: { id: txn.id }, data: { status: 'FAILED', raw: { problem: `start failed: ${why}` } } });
       await prisma.checkoutSession.updateMany({ where: { id: txn.sessionId, completedAt: null }, data: { status: 'OPEN', step: 'PAYMENT' } });
       return reply.redirect(`/checkout/done/${ref}`, 303);
     }

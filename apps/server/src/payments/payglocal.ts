@@ -71,8 +71,9 @@ export class PayGlocalGateway implements Gateway {
       .sign(merchant);
   }
 
+  /** Exactly what PayGlocal's own client sends: the JWS in x-gl-token-external, nothing else of ours. */
   private headers(jws: string): Record<string, string> {
-    return { 'x-gl-token-external': jws, 'x-gl-merchantid': this.creds.merchantId, 'x-gl-kid': this.creds.privateKeyId };
+    return { 'x-gl-token-external': jws };
   }
 
   async start(req: PaymentRequest): Promise<GatewayStart> {

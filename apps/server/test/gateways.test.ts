@@ -1,5 +1,5 @@
 import { createHash, generateKeyPairSync } from 'node:crypto';
-import { compactDecrypt, compactVerify, importPKCS8, importSPKI } from 'jose';
+import { compactDecrypt, compactVerify, decodeProtectedHeader, importPKCS8, importSPKI } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { loadEnv } from '../src/env.js';
 import { WhatsAppOtpSender } from '../src/messaging/otp-sender.js';
@@ -91,7 +91,10 @@ describe('PayGlocal', () => {
     const verified = await compactVerify(headers['x-gl-token-external']!, await importSPKI(merchant.publicKey.export({ type: 'spki', format: 'pem' }).toString(), 'RS256'));
     const digest = JSON.parse(new TextDecoder().decode(verified.payload)).digest;
     expect(digest).toBe(createHash('sha256').update(jwe).digest('base64'));
-    expect(headers['x-gl-merchantid']).toBe('MID1');
+    // Same headers as PayGlocal's own client (payglocal-js-client): only the JWS of ours.
+    expect(Object.keys(headers).sort()).toEqual(['content-type', 'x-gl-token-external']);
+    expect(decodeProtectedHeader(headers['x-gl-token-external']!)).toEqual({ alg: 'RS256', kid: creds.privateKeyId, 'x-gl-merchantId': 'MID1', 'issued-by': 'MID1', 'is-digested': 'true', 'x-gl-enc': 'true' });
+    expect(decodeProtectedHeader(jwe)).toMatchObject({ alg: 'RSA-OAEP-256', enc: 'A128CBC-HS256', kid: creds.publicKeyId, 'issued-by': 'MID1', exp: 300000 });
   });
 
   it('maps the status answer and reads the callback only for the reference', async () => {
