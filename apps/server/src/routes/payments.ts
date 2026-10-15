@@ -33,7 +33,7 @@ const gatewayBody = z.object({
   credentials: z.record(z.string(), z.string().max(10_000)).default({}),
 });
 
-const routesBody = z.object({ routes: z.record(z.string(), z.enum(['PAYGLOCAL', 'PAYU', 'DEV']).nullable()) });
+const routesBody = z.object({ routes: z.record(z.string(), z.enum(['PAYGLOCAL', 'PAYU', 'PINELABS', 'DEV']).nullable()) });
 
 /**
  * Settings > Payments: our checkout on / off, COD and partial COD, gateway credentials
@@ -42,7 +42,7 @@ const routesBody = z.object({ routes: z.record(z.string(), z.enum(['PAYGLOCAL', 
 export function paymentRoutes(app: FastifyInstance): void {
   const { prisma, keyring, env } = app.deps;
   const devAllowed = () => app.deps.gateways.devAllowed();
-  const available = (): GatewayProviderKey[] => (devAllowed() ? ['PAYGLOCAL', 'PAYU', 'DEV'] : ['PAYGLOCAL', 'PAYU']);
+  const available = (): GatewayProviderKey[] => (devAllowed() ? ['PAYGLOCAL', 'PAYU', 'PINELABS', 'DEV'] : ['PAYGLOCAL', 'PAYU', 'PINELABS']);
 
   async function read(storeId: string): Promise<PaymentsResponse> {
     const [s, accounts, routes] = await Promise.all([

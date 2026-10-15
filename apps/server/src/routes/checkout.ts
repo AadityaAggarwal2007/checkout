@@ -9,6 +9,7 @@ import { forgetDevice, sendOtp, verifyOtp } from '../checkout/otp.js';
 import { esc, gatewayPostPage, notifyOpenerScript, rupee, sendPage } from '../checkout/pages.js';
 import { CheckoutService, isTestKey, SESSION_TTL_SECONDS, storeOrigins, storeUrl, type SessionWithStore } from '../checkout/service.js';
 import { sha256Hex } from '../lib/crypto.js';
+import { pineLabsRef } from '../payments/pinelabs.js';
 import { HttpError, badRequest, notFound } from '../lib/errors.js';
 import { normaliseShop } from '../lib/shopify.js';
 import { DevOtpSender } from '../messaging/otp-sender.js';
@@ -335,11 +336,12 @@ export function checkoutRoutes(app: FastifyInstance): void {
 
   app.post('/webhooks/gateway/:provider', { config: { rateLimit: { max: 300, timeWindow: '1 minute' } } }, async (req, reply) => {
     const provider = String((req.params as { provider: string }).provider).toUpperCase();
-    if (!['PAYU', 'PAYGLOCAL'].includes(provider)) throw notFound();
+    if (!['PAYU', 'PAYGLOCAL', 'PINELABS'].includes(provider)) throw notFound();
     const raw = req.rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
     const body = (req.body ?? {}) as Record<string, unknown>;
     let ref: string | null = null;
     if (provider === 'PAYU') ref = typeof body.txnid === 'string' ? body.txnid : null;
+    else if (provider === 'PINELABS') ref = pineLabsRef(body, {});
     else if (typeof body['x-gl-token'] === 'string') {
       try {
         const payload = JSON.parse(Buffer.from(String(body['x-gl-token']).split('.')[1] ?? '', 'base64url').toString('utf8')) as { merchantTxnId?: string };

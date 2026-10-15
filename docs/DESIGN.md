@@ -9,7 +9,7 @@ Working name in code: **`checkout`** (the brand name is a setting, decided later
 
 - Conversion up: a cart drawer + 1-page checkout that is faster than Shopify's, with one-click for returning shoppers.
 - COD down: prepaid offers, partial COD, COD rules (RTO suite), COD confirmation.
-- Shopify fees down: the store's own payment gateway (PayGlocal, PayU in v1).
+- Shopify fees down: the store's own payment gateway (PayGlocal, PayU, Pine Labs Online).
 - Sold to outside stores: multi-store, every store fully separate, 1% of every successful order billed.
 - Fast: the storefront script never slows the store; the checkout opens instantly.
 - Easy to change: one feature = one module; texts / colours / rules come from settings, never hard-coded.
@@ -91,7 +91,7 @@ Activity log, Webhook log, Password). Store switcher top right. Every editor has
   ETA text.
 - **RTO suite:** single rule / all rules (strictest wins); rules on cart amount, item count, past COD orders,
   new vs repeat, returns, user, pincode, state, product, collection; outcome = COD off / partial COD only / block.
-- **Settings > Payments:** gateway cards (PayGlocal, PayU in v1) with write-only credentials, test / live, webhook
+- **Settings > Payments:** gateway cards (PayGlocal, PayU, Pine Labs Online) with write-only credentials, test / live, webhook
   checkbox; routing table method → gateway; COD and partial COD settings (fixed ₹ or %, set by the merchant).
 - **Integrations (v1):** Meta Pixel.
 
@@ -148,8 +148,17 @@ Exit flow: leaving shows default / out-of-stock / savings reminder / survey (per
   they change the page it falls back to the hosted page; the reason is in the log (`grep "payglocal upi-intent"`).
   Live keys must use Mode Live (test mode = UAT host = 401 with live keys). Requests carry only `x-gl-token-external`,
   exactly like PayGlocal's own payglocal-js-client.
+- **Pine Labs Online (Plural v3, added 2026-10-15):** credentials MID + Client ID + Client Secret (secret). Bearer
+  token from `POST /auth/v1/token` (client credentials, kept in memory until shortly before `expires_at`); every
+  call carries `Merchant-ID`, `Request-ID`, `Request-Timestamp`. Hosted page: `POST /checkout/v1/orders`
+  (`allowed_payment_methods` = the chosen method) → `redirect_url`, `order_id` = gatewayRef. UPI inside the page,
+  documented by Pine Labs: `POST /pay/v1/orders` (UPI only) → `POST /pay/v1/orders/{id}/payments` with
+  `upi_details.txn_mode = INTENT` → `challenge_url` = the `upi://pay` link (same checks / fallback / 6 h pause; log
+  `grep "pinelabs upi-intent"`). Status: `GET /pay/v1/orders/{gatewayRef}`, `PROCESSED` = paid, amounts are paise,
+  the answer's `merchant_order_reference` must be ours. Webhook URL `/webhooks/gateway/pinelabs` (reads only
+  `merchant_order_reference`). Hosts: test `pluraluat.v2.pinepg.in`, live `api.pluralpay.in`.
 - **Paid:** the return page, the gateway webhook and the iframe's polling all call `settle(ref)`: the gateway's
-  status API decides (PayU `verify_payment`, PayGlocal status by gid); the amount must match. Then `createOrder`
+  status API decides (PayU `verify_payment`, PayGlocal status by gid, Pine Labs order status); the amount must match. Then `createOrder`
   (one per session, unique key) → order number, coupon uses, shopper counters, `UsageCharge` 1%, then
   `orderCreate` in Shopify (failures kept on the order, retried every minute, button in the dashboard).
 - **Back on the store:** desktop: the gateway tab tells the iframe and closes; phone: the thank-you page links to

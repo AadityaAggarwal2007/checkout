@@ -71,7 +71,7 @@ export function shopifyOrderInput(order: SinkOrder, opts: { rich?: boolean } = {
   const mode = order.paymentMode === 'PREPAID' ? 'Prepaid' : order.paymentMode === 'COD' ? 'COD' : 'Partial COD';
   const transactions: Array<Record<string, unknown>> = [];
   const paid = order.transactions?.find((t) => t.status === 'SUCCESS');
-  const gatewayName = paid ? (paid.provider === 'PAYU' ? 'PayU' : paid.provider === 'PAYGLOCAL' ? 'PayGlocal' : paid.provider) : (order.paymentMethod ?? 'online');
+  const gatewayName = paid ? (paid.provider === 'PAYU' ? 'PayU' : paid.provider === 'PAYGLOCAL' ? 'PayGlocal' : paid.provider === 'PINELABS' ? 'Pine Labs' : paid.provider) : (order.paymentMethod ?? 'online');
   if (order.paidAmount > 0) transactions.push({ kind: 'SALE', status: 'SUCCESS', gateway: gatewayName, amountSet: money(order.paidAmount), ...(rich && paid?.gatewayRef ? { authorizationCode: paid.gatewayRef } : {}) });
   if (order.dueOnDelivery > 0) transactions.push({ kind: 'SALE', status: 'PENDING', gateway: 'Cash on Delivery (COD)', amountSet: money(order.dueOnDelivery) });
 

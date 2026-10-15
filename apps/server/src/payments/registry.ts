@@ -6,6 +6,7 @@ import type { Keyring } from '../lib/crypto.js';
 import { DevGateway } from './dev.js';
 import { PayGlocalGateway, type PayGlocalCredentials } from './payglocal.js';
 import { PayUGateway, type PayUCredentials } from './payu.js';
+import { PineLabsGateway, type PineLabsCredentials } from './pinelabs.js';
 import type { FetchLike, Gateway } from './types.js';
 
 const pem = (kind: 'PUBLIC KEY' | 'PRIVATE KEY') =>
@@ -21,6 +22,11 @@ export const credentialSchemas = {
     merchantPrivateKey: pem('PRIVATE KEY'),
   }),
   PAYU: z.object({ key: z.string().trim().min(3).max(100), salt: z.string().trim().min(3).max(200) }),
+  PINELABS: z.object({
+    mid: z.string().trim().min(2).max(100),
+    clientId: z.string().trim().min(3).max(200),
+    clientSecret: z.string().trim().min(3).max(500),
+  }),
   DEV: z.object({}),
 } satisfies Record<GatewayProviderKey, z.ZodTypeAny>;
 
@@ -52,6 +58,8 @@ export class GatewayRegistry {
         return new PayUGateway(this.deps.keyring.decryptJson<PayUCredentials>(account.credentialsEnc), mode, this.fetchImpl);
       case 'PAYGLOCAL':
         return new PayGlocalGateway(this.deps.keyring.decryptJson<PayGlocalCredentials>(account.credentialsEnc), mode, this.fetchImpl);
+      case 'PINELABS':
+        return new PineLabsGateway(this.deps.keyring.decryptJson<PineLabsCredentials>(account.credentialsEnc), mode, this.fetchImpl);
       case 'DEV':
         if (!this.devAllowed()) throw new Error('The test gateway is switched off on this server.');
         return new DevGateway(this.deps.prisma, this.deps.env.PUBLIC_URL);

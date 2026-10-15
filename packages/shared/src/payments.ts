@@ -1,9 +1,9 @@
 /**
- * Payment gateways a store can connect (v1: PayGlocal, PayU; DEV only on a local server).
+ * Payment gateways a store can connect (PayGlocal, PayU, Pine Labs Online; DEV only on a local server).
  * The dashboard draws the credential form from this list; the server validates against it.
  * Secret fields are write-only: the server never sends them back.
  */
-export type GatewayProviderKey = 'PAYGLOCAL' | 'PAYU' | 'DEV';
+export type GatewayProviderKey = 'PAYGLOCAL' | 'PAYU' | 'PINELABS' | 'DEV';
 
 export interface GatewayField {
   key: string;
@@ -30,6 +30,14 @@ export const GATEWAYS: Record<GatewayProviderKey, { name: string; fields: Gatewa
     fields: [
       { key: 'key', label: 'Merchant key', secret: false },
       { key: 'salt', label: 'Merchant salt (v1)', secret: true },
+    ],
+  },
+  PINELABS: {
+    name: 'Pine Labs Online',
+    fields: [
+      { key: 'mid', label: 'MID', secret: false, help: 'Pine Labs Online dashboard > Developers > API keys' },
+      { key: 'clientId', label: 'Client ID', secret: false },
+      { key: 'clientSecret', label: 'Client Secret', secret: true },
     ],
   },
   DEV: { name: 'Test gateway (local only)', fields: [] },

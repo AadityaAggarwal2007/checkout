@@ -396,6 +396,7 @@ model BlockedPincode {
 enum GatewayProvider {
   PAYGLOCAL
   PAYU
+  PINELABS
   /// Local test gateway (only when the server runs with DEV_GATEWAY=1; never on a live server).
   DEV
 }

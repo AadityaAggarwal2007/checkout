@@ -7,6 +7,7 @@ import { Keyring } from '../src/lib/crypto.js';
 import { ShopifyOrderSink, shopifyOrderInput } from '../src/orders/sink.js';
 import { PayGlocalGateway, qrText } from '../src/payments/payglocal.js';
 import { PayUGateway } from '../src/payments/payu.js';
+import { PineLabsGateway, pineLabsRef } from '../src/payments/pinelabs.js';
 import { paiseFrom } from '../src/payments/types.js';
 import { readFileSync } from 'node:fs';
 
@@ -155,6 +156,93 @@ describe('PayGlocal', () => {
     const elsewhere = sequence([initiated, { body: { data: { actionUri: { indUpiPaynowUrl: 'https://evil.example/pay' } } } }]);
     expect(await new PayGlocalGateway(creds, 'test', elsewhere.fetchImpl).startUpiIntent(UPI)).toBeNull();
     expect(elsewhere.calls).toHaveLength(2); // never sent the token to another host
+  });
+});
+
+describe('Pine Labs Online', () => {
+  /** Answers in order (the token first, then the API calls). */
+  function sequence(answers: Array<{ status?: number; body: unknown }>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      calls.push({ url, init });
+      const a = answers[calls.length - 1] ?? { status: 500, body: {} };
+      return new Response(JSON.stringify(a.body), { status: a.status ?? 200, headers: { 'content-type': 'application/json' } });
+    };
+    return { calls, fetchImpl };
+  }
+  // Each test its own client id, so the token cache of one test never answers for another.
+  let n = 0;
+  const creds = () => ({ mid: '123456', clientId: `client-${++n}`, clientSecret: 'shh' });
+  const token = { body: { access_token: 'TKN', expires_at: new Date(Date.now() + 3_600_000).toISOString() } };
+  const UPI = { ...REQ, notifyUrl: 'https://api.test/webhooks/gateway/pinelabs', clientIp: '1.2.3.4', userAgent: 'Mozilla/5.0 test' };
+
+  it('hosted checkout: token, then the order with our reference, amount in paise and the chosen method', async () => {
+    const { calls, fetchImpl } = sequence([token, { body: { order_id: 'v1-ord-1', redirect_url: 'https://api.pluralpay.in/api/v3/checkout-bff/redirect/checkout?token=x' } }]);
+    const start = await new PineLabsGateway(creds(), 'live', fetchImpl).start({ ...REQ, method: 'card' });
+    expect(start).toEqual({ kind: 'redirect', url: 'https://api.pluralpay.in/api/v3/checkout-bff/redirect/checkout?token=x', gatewayRef: 'v1-ord-1' });
+    expect(calls[0]!.url).toBe('https://api.pluralpay.in/api/auth/v1/token');
+    expect(JSON.parse(String(calls[0]!.init!.body))).toMatchObject({ grant_type: 'client_credentials', client_secret: 'shh' });
+    expect(calls[1]!.url).toBe('https://api.pluralpay.in/api/checkout/v1/orders');
+    const headers = calls[1]!.init!.headers as Record<string, string>;
+    expect(headers.authorization).toBe('Bearer TKN');
+    expect(headers['merchant-id']).toBe('123456');
+    const body = JSON.parse(String(calls[1]!.init!.body));
+    expect(body).toMatchObject({
+      merchant_order_reference: 'ckABCDEF123456',
+      order_amount: { value: 14780, currency: 'INR' },
+      allowed_payment_methods: ['CARD'],
+      callback_url: REQ.returnUrl,
+      purchase_details: { customer: { first_name: 'Asha', last_name: 'Verma', mobile_number: '9876543210' } },
+    });
+    expect(JSON.stringify(body)).not.toContain('shh');
+  });
+
+  it('the token is fetched once and reused', async () => {
+    const c = creds();
+    const { calls, fetchImpl } = sequence([token, { body: { order_id: 'a', redirect_url: 'https://x.test/a' } }, { body: { order_id: 'b', redirect_url: 'https://x.test/b' } }]);
+    const gw = new PineLabsGateway(c, 'test', fetchImpl);
+    await gw.start(REQ);
+    await gw.start(REQ);
+    expect(calls.map((x) => x.url.replace('https://pluraluat.v2.pinepg.in/api', ''))).toEqual(['/auth/v1/token', '/checkout/v1/orders', '/checkout/v1/orders']);
+  });
+
+  it('UPI QR in our page: a pay order, then a UPI INTENT payment whose challenge_url is the link', async () => {
+    const link = 'upi://pay?pa=shop@pine&pn=SHOP&am=147.80&cu=INR&tr=PL1';
+    const { calls, fetchImpl } = sequence([token, { body: { data: { order_id: 'v1-ord-9' } } }, { body: { data: { order_id: 'v1-ord-9', challenge_url: link } } }]);
+    expect(await new PineLabsGateway(creds(), 'test', fetchImpl).startUpiIntent(UPI)).toEqual({ intent: link, gatewayRef: 'v1-ord-9' });
+    expect(calls[1]!.url).toBe('https://pluraluat.v2.pinepg.in/api/pay/v1/orders');
+    expect(JSON.parse(String(calls[1]!.init!.body)).allowed_payment_methods).toEqual(['UPI']);
+    expect(calls[2]!.url).toBe('https://pluraluat.v2.pinepg.in/api/pay/v1/orders/v1-ord-9/payments');
+    expect(JSON.parse(String(calls[2]!.init!.body)).payments[0]).toMatchObject({ payment_method: 'UPI', payment_amount: { value: 14780 }, payment_option: { upi_details: { txn_mode: 'INTENT' } } });
+  });
+
+  it('UPI QR: anything unexpected means the hosted page (null), never a wrong link', async () => {
+    const order = { body: { data: { order_id: 'o1' } } };
+    const wrongAmount = sequence([token, order, { body: { data: { challenge_url: 'upi://pay?pa=shop@pine&am=1.00&cu=INR' } } }]);
+    expect(await new PineLabsGateway(creds(), 'test', wrongAmount.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    const refused = sequence([token, order, { status: 400, body: { code: 'INVALID_REQUEST', message: 'UPI intent not enabled' } }]);
+    expect(await new PineLabsGateway(creds(), 'test', refused.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    const noOrder = sequence([token, { status: 401, body: { message: 'bad' } }]);
+    expect(await new PineLabsGateway(creds(), 'test', noOrder.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    const badToken = sequence([{ status: 401, body: { message: 'invalid client' } }]);
+    expect(await new PineLabsGateway(creds(), 'test', badToken.fetchImpl).startUpiIntent(UPI)).toBeNull();
+  });
+
+  it('status: PROCESSED = paid with the amount in paise; failed / pending; another payment is refused', async () => {
+    const answer = (data: unknown) => sequence([token, { body: { data } }]).fetchImpl;
+    const paid = await new PineLabsGateway(creds(), 'test', answer({ status: 'PROCESSED', merchant_order_reference: REQ.merchantRef, order_amount: { value: 14780 }, payments: [{ payment_method: 'UPI', status: 'PROCESSED' }] })).status(REQ.merchantRef, 'o1');
+    expect(paid).toMatchObject({ state: 'success', amount: 14780, method: 'UPI', gatewayRef: 'o1' });
+    expect((await new PineLabsGateway(creds(), 'test', answer({ status: 'FAILED' })).status(REQ.merchantRef, 'o1')).state).toBe('failed');
+    expect((await new PineLabsGateway(creds(), 'test', answer({ status: 'PENDING', order_amount: { value: 14780 } })).status(REQ.merchantRef, 'o1'))).toMatchObject({ state: 'pending', amount: undefined });
+    expect((await new PineLabsGateway(creds(), 'test', answer({ status: 'PROCESSED', order_amount: { value: '147.80' } })).status(REQ.merchantRef, 'o1')).amount).toBeUndefined();
+    await expect(new PineLabsGateway(creds(), 'test', answer({ status: 'PROCESSED', merchant_order_reference: 'other', order_amount: { value: 14780 } })).status(REQ.merchantRef, 'o1')).rejects.toThrow();
+    expect((await new PineLabsGateway(creds(), 'test', answer({})).status(REQ.merchantRef, null)).state).toBe('pending');
+  });
+
+  it('webhook / callback: only our reference is read from it', () => {
+    expect(pineLabsRef({ event_type: 'ORDER_PROCESSED', data: { merchant_order_reference: 'ckXYZ', status: 'PROCESSED' } }, {})).toBe('ckXYZ');
+    expect(pineLabsRef({ merchant_order_reference: 'ckTOP' }, {})).toBe('ckTOP');
+    expect(pineLabsRef({}, {})).toBeNull();
   });
 });
 
