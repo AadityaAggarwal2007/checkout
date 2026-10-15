@@ -364,9 +364,9 @@ export class CheckoutService {
   /** Gateway accounts (id + mode) whose last UPI intent start was refused, and until when we leave them alone. */
   private upiRefusedUntil = new Map<string, number>();
 
-  /** True when paying by UPI through this account shows the QR / app buttons in our page (PayU or the test gateway, unless it refused lately). */
+  /** True when paying by UPI through this account shows the QR / app buttons in our page (PayU, PayGlocal or the test gateway, unless it refused lately). */
   private inlineUpi(account: GatewayAccount | undefined): boolean {
-    if (!account || (account.provider !== 'PAYU' && account.provider !== 'DEV')) return false;
+    if (!account || (account.provider !== 'PAYU' && account.provider !== 'PAYGLOCAL' && account.provider !== 'DEV')) return false;
     const until = this.upiRefusedUntil.get(`${account.id}:${account.mode}`);
     if (until !== undefined && until > Date.now()) return false;
     return true;

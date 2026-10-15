@@ -107,6 +107,46 @@ describe('PayGlocal', () => {
     expect(ok.refFromCallback({ 'x-gl-token': token })).toBe('ckXYZ12345678');
     expect(ok.refFromCallback({})).toBeNull();
   });
+
+  /** Answers in order: initiate, page data, UPI pay-now (like PayGlocal's hosted page sees them). */
+  function sequence(answers: Array<{ status?: number; body: unknown }>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      calls.push({ url, init });
+      const a = answers[calls.length - 1] ?? { status: 500, body: {} };
+      return new Response(JSON.stringify(a.body), { status: a.status ?? 200, headers: { 'content-type': 'application/json' } });
+    };
+    return { calls, fetchImpl };
+  }
+  const UPI = { ...REQ, clientIp: '1.2.3.4', userAgent: 'Mozilla/5.0 test' };
+  const initiated = { body: { status: 'INPROGRESS', gid: 'gl_123', data: { redirectUrl: 'https://api.uat.payglocal.in/gl/payflow-ui/?x-gl-token=TOK.EN-1' } } };
+  const pageData = { body: { gid: 'gl_123', data: { payflowTxnResponse: { actionUri: { indUpiPaynowUrl: '/gl/v1/ind/UPI/paynow', cancelUrl: '/x' } } } } };
+
+  it('UPI QR in our page: initiate, page data, then the upi:// link of that payment', async () => {
+    const { calls, fetchImpl } = sequence([
+      initiated,
+      pageData,
+      { body: { gid: 'gl_123', data: { upiRenderingData: { upiData: { deepLink: 'upi://pay?pa=shop@bank&pn=SHOP&am=147.80&cu=INR&tr=x1', timerSeconds: 900 } } } } },
+    ]);
+    const gw = new PayGlocalGateway(creds, 'test', fetchImpl);
+    expect(await gw.startUpiIntent(UPI)).toEqual({ intent: 'upi://pay?pa=shop@bank&pn=SHOP&am=147.80&cu=INR&tr=x1', gatewayRef: 'gl_123' });
+    expect(calls[1]!.url).toBe('https://api.uat.payglocal.in/gl/v2/payments/redirect/dc?x-gl-token=TOK.EN-1');
+    expect(calls[2]!.url).toBe('https://api.uat.payglocal.in/gl/v1/ind/UPI/paynow?x-gl-token=TOK.EN-1');
+    expect(calls[2]!.init!.method).toBe('POST');
+    expect(JSON.parse(String(calls[2]!.init!.body))).toEqual({ customerCurrency: 'INR', customerDeviceType: 'WEB', upiData: {}, agreedOnTnCs: false });
+  });
+
+  it('UPI QR: anything unexpected means the hosted page (null), never a wrong link', async () => {
+    const noEndpoint = sequence([initiated, { body: { data: {} } }]);
+    expect(await new PayGlocalGateway(creds, 'test', noEndpoint.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    const wrongAmount = sequence([initiated, pageData, { body: { data: { upiData: { deepLink: 'upi://pay?pa=shop@bank&am=1.00&cu=INR' } } } }]);
+    expect(await new PayGlocalGateway(creds, 'test', wrongAmount.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    const refused = sequence([initiated, pageData, { status: 400, body: { errors: { detailedMessage: 'nope' } } }]);
+    expect(await new PayGlocalGateway(creds, 'test', refused.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    const elsewhere = sequence([initiated, { body: { data: { actionUri: { indUpiPaynowUrl: 'https://evil.example/pay' } } } }]);
+    expect(await new PayGlocalGateway(creds, 'test', elsewhere.fetchImpl).startUpiIntent(UPI)).toBeNull();
+    expect(elsewhere.calls).toHaveLength(2); // never sent the token to another host
+  });
 });
 
 describe('WhatsApp OTP sender', () => {
