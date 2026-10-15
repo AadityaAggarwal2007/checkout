@@ -78,6 +78,19 @@ describe('which gateway takes a method', () => {
     expect(routeTable([dev], [], true).get('upi')).toBe(dev);
     expect(routeTable([dev, payu], [], false).get('card')).toBe(payu);
   });
+
+  it('Automatic methods and routes to a switched-off gateway use the first active gateway', async () => {
+    const { routeTable } = await import('../src/checkout/pricing.js');
+    const glocal = { id: 'g', provider: 'PAYGLOCAL', active: false } as never;
+    const pine = { id: 'pl', provider: 'PINELABS', active: true } as never;
+    const payu = { id: 'p', provider: 'PAYU', active: true } as never;
+    const routes = [{ method: 'upi', gatewayAccountId: 'g' }, { method: 'card', gatewayAccountId: 'p' }] as never;
+    const table = routeTable([pine, payu].concat(glocal), routes, false);
+    expect(table.get('upi')).toBe(pine); // its gateway is off
+    expect(table.get('card')).toBe(payu); // explicit route kept
+    expect(table.get('netbanking')).toBe(pine); // Automatic
+    expect(routeTable([glocal], routes, false).size).toBe(0);
+  });
 });
 
 describe('gateway hand-off page', () => {

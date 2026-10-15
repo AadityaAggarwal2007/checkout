@@ -29,8 +29,9 @@ export interface PricingContext {
 const ONLINE: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet', 'emi', 'pay_later'];
 
 /**
- * Which gateway takes which method. Explicit routes win; an active account with no routes takes
- * every online method (the common one-gateway store).
+ * Which gateway takes which method. An explicit route to an active gateway wins; every other online
+ * method ("Automatic", or routed to a gateway that is now switched off) goes to the first active
+ * gateway, as the dashboard says. Never "no payment method" while a gateway is on.
  */
 export function routeTable(accounts: GatewayAccount[], routes: PaymentRoute[], devAllowed: boolean): Map<PaymentMethod, GatewayAccount> {
   // A real gateway always comes before the local test one (both on = real payments, test only as a spare).
@@ -40,7 +41,7 @@ export function routeTable(accounts: GatewayAccount[], routes: PaymentRoute[], d
     const acc = usable.find((a) => a.id === r.gatewayAccountId);
     if (acc && ONLINE.includes(r.method as PaymentMethod)) out.set(r.method as PaymentMethod, acc);
   }
-  if (routes.length === 0 && usable[0]) for (const m of ONLINE) out.set(m, usable[0]);
+  if (usable[0]) for (const m of ONLINE) if (!out.has(m)) out.set(m, usable[0]);
   return out;
 }
 
