@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { CompactEncrypt, CompactSign, decodeJwt, importPKCS8, importSPKI, type KeyLike } from 'jose';
 import type { FetchLike, Gateway, GatewayStart, GatewayStatus, PaymentRequest, UpiIntentRequest, UpiIntentStart } from './types.js';
+import jsQR from 'jsqr';
+import { PNG } from 'pngjs';
 import { upiIntentIn } from './payu.js';
 import { paiseFrom, rupees } from './types.js';
 
@@ -163,8 +165,11 @@ export class PayGlocalGateway implements Gateway {
         headers: { ...common, 'content-type': 'application/json' },
         body: JSON.stringify({ customerCurrency: 'INR', customerDeviceType: 'WEB', upiData: {}, agreedOnTnCs: false }),
       });
-      const intent = upiIntentIn(answer, req.amount);
-      if (!intent) return refuse(`no upi:// link for our amount: ${JSON.stringify(shapeOf(answer)).slice(0, 600)}`);
+      // The page's answer: upiData { qrCode: base64 PNG (WEB), deepLink: upi:// (MOBILE), timerSeconds }.
+      const upiData = valueOf(answer, 'upiData') as { qrCode?: unknown; deepLink?: unknown } | undefined;
+      const fromQr = typeof upiData?.qrCode === 'string' ? qrText(upiData.qrCode) : null;
+      const intent = upiIntentIn({ deepLink: upiData?.deepLink, qr: fromQr }, req.amount);
+      if (!intent) return refuse(`no upi:// link for our amount: ${JSON.stringify(shapeOf(upiData ?? answer)).slice(0, 600)}`);
       return { intent, gatewayRef: gid };
     } catch (err) {
       return refuse(err instanceof Error ? err.message : 'UPI request failed');
@@ -218,4 +223,18 @@ function shapeOf(value: unknown, depth = 0): unknown {
   if (Array.isArray(value)) return depth > 3 ? '[…]' : value.slice(0, 2).map((v) => shapeOf(v, depth + 1));
   if (value && typeof value === 'object') return depth > 3 ? '{…}' : Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shapeOf(v, depth + 1)]));
   return typeof value;
+}
+
+/** The text inside PayGlocal's QR image (a base64 PNG): their UPI pay link. Null when it is not a readable QR. */
+export function qrText(base64: string): string | null {
+  try {
+    const buf = Buffer.from(base64.replace(/^data:image\/[a-z]+;base64,/i, '').trim(), 'base64');
+    if (buf.length === 0 || buf.length > 2_000_000) return null;
+    const png = PNG.sync.read(buf);
+    if (png.width * png.height > 4_000_000) return null;
+    const code = jsQR(new Uint8ClampedArray(png.data.buffer, png.data.byteOffset, png.data.length), png.width, png.height);
+    return code?.data ?? null;
+  } catch {
+    return null;
+  }
 }

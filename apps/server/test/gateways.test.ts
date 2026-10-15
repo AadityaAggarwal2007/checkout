@@ -5,9 +5,10 @@ import { loadEnv } from '../src/env.js';
 import { WhatsAppOtpSender } from '../src/messaging/otp-sender.js';
 import { Keyring } from '../src/lib/crypto.js';
 import { ShopifyOrderSink, shopifyOrderInput } from '../src/orders/sink.js';
-import { PayGlocalGateway } from '../src/payments/payglocal.js';
+import { PayGlocalGateway, qrText } from '../src/payments/payglocal.js';
 import { PayUGateway } from '../src/payments/payu.js';
 import { paiseFrom } from '../src/payments/types.js';
+import { readFileSync } from 'node:fs';
 
 const sha512 = (s: string) => createHash('sha512').update(s).digest('hex');
 
@@ -134,6 +135,14 @@ describe('PayGlocal', () => {
     expect(calls[2]!.url).toBe('https://api.uat.payglocal.in/gl/v1/ind/UPI/paynow?x-gl-token=TOK.EN-1');
     expect(calls[2]!.init!.method).toBe('POST');
     expect(JSON.parse(String(calls[2]!.init!.body))).toEqual({ customerCurrency: 'INR', customerDeviceType: 'WEB', upiData: {}, agreedOnTnCs: false });
+  });
+
+  // fixtures/upi-qr.png: a QR image like PayGlocal's, holding the test link below (made with our checkout's encoder).
+  it('UPI QR from the QR image PayGlocal sends for WEB (base64 PNG): we read the upi:// link out of it', async () => {
+    const link = 'upi://pay?pa=shop@bank&pn=SHOP&am=147.80&cu=INR&tr=x2';
+    const { fetchImpl } = sequence([initiated, pageData, { body: { data: { upiRenderingData: { headerInfo: { mid: 'M' }, upiData: { qrCode: readFileSync(new URL('./fixtures/upi-qr.png', import.meta.url)).toString('base64'), timerSeconds: 900 } } } } }]);
+    expect(await new PayGlocalGateway(creds, 'test', fetchImpl).startUpiIntent(UPI)).toEqual({ intent: link, gatewayRef: 'gl_123' });
+    expect(qrText('not an image')).toBeNull();
   });
 
   it('UPI QR: anything unexpected means the hosted page (null), never a wrong link', async () => {
@@ -285,3 +294,4 @@ describe('Shopify order', () => {
     expect(JSON.stringify(bodies[0])).toContain("tag:'ck-CK1001'");
   });
 });
+
