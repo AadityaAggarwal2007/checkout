@@ -106,7 +106,7 @@ export class PineLabsGateway implements Gateway {
       '/checkout/v1/orders',
       { ...this.orderBody(req, req.method ? METHODS[req.method] : undefined), integration_mode: 'REDIRECT' },
     );
-    if (!ok || !json.redirect_url) throw new Error(`Pine Labs checkout failed (${status}): ${json.message ?? json.response_message ?? 'no redirect_url'}`);
+    if (!ok || !json.redirect_url) throw new Error(`Pine Labs checkout failed (${status}): ${json.message ?? json.response_message ?? JSON.stringify(json).slice(0, 300)}`);
     return { kind: 'redirect', url: json.redirect_url, gatewayRef: json.order_id };
   }
 
