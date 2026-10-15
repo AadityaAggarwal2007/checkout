@@ -137,6 +137,17 @@ Exit flow: leaving shows default / out-of-stock / savings reminder / survey (per
   the poll, webhook and return page confirm it exactly as below. Any other answer (a page, an error, no link:
   PayU must enable "UPI Intent S2S" for the merchant id) falls back to the hosted page with nothing shown, and that
   account is not asked again for 6 hours (in memory, per account id + mode; a success clears it).
+- **UPI inside the page (PayGlocal, live since 2026-10-15):** PayGlocal documents only PayCollect (hosted page) and
+  card-only PayDirect, so `PayGlocalGateway.startUpiIntent` does what its hosted page does on "Generate QR", for
+  the payment we just initiated: PayCollect initiate → take `x-gl-token` from the `redirectUrl` → `GET
+  /gl/v2/payments/redirect/dc?x-gl-token=…` (page data; `indUpiPaynowUrl` sits a few levels down) → `POST
+  <indUpiPaynowUrl>?x-gl-token=…` with `{customerCurrency:'INR', customerDeviceType:'WEB', upiData:{},
+  agreedOnTnCs:false}`. The answer's `upiData` has `qrCode` (base64 PNG, read with jsqr + pngjs into the `upi://pay`
+  link), `deepLink` (mobile flow only) and `timerSeconds` (900). Same checks and fallback as PayU (UPI pay link, our
+  exact amount, token only sent to the page's PayGlocal host, 6 h pause on refusal). Undocumented on their side: if
+  they change the page it falls back to the hosted page; the reason is in the log (`grep "payglocal upi-intent"`).
+  Live keys must use Mode Live (test mode = UAT host = 401 with live keys). Requests carry only `x-gl-token-external`,
+  exactly like PayGlocal's own payglocal-js-client.
 - **Paid:** the return page, the gateway webhook and the iframe's polling all call `settle(ref)`: the gateway's
   status API decides (PayU `verify_payment`, PayGlocal status by gid); the amount must match. Then `createOrder`
   (one per session, unique key) → order number, coupon uses, shopper counters, `UsageCharge` 1%, then
